@@ -106,6 +106,7 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
 
         void setup() override;
         void loop() override;
+        void dump_config() override;
 
     protected:
         select::Select *vertical_swing_select_   = nullptr; /* Advanced vertical swing select */

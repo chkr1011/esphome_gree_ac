@@ -1,5 +1,6 @@
 // based on: https://github.com/DomiStyle/esphome-panasonic-ac
 #include "esppac_cnt.h"
+#include "esphome/core/log.h"
 
 namespace esphome {
 namespace sinclair_ac {

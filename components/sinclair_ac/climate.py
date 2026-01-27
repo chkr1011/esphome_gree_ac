@@ -14,7 +14,7 @@ SinclairAC = sinclair_ac_ns.class_(
     "SinclairAC", cg.Component, uart.UARTDevice, climate.Climate
 )
 sinclair_ac_cnt_ns = sinclair_ac_ns.namespace("CNT")
-SinclairACCNT = sinclair_ac_cnt_ns.class_("SinclairACCNT", SinclairAC)
+SinclairACCNT = sinclair_ac_cnt_ns.class_("SinclairACCNT", SinclairAC, cg.Component)
 
 SinclairACSwitch = sinclair_ac_ns.class_(
     "SinclairACSwitch", switch.Switch, cg.Component
