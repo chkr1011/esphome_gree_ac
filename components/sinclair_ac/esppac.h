@@ -23,11 +23,14 @@ static const float TEMPERATURE_TOLERANCE = 2;  // The tolerance to allow when ch
 static const uint8_t TEMPERATURE_THRESHOLD = 100;  // Maximum temperature the AC can report (formally 119.5 for sinclair protocol, but 100 is impossible, soo...)
 
 namespace fan_modes{
-    const char* const FAN_AUTO  = "0 - Auto";
-    const char* const FAN_LOW   = "1 - Low";
-    const char* const FAN_MED   = "2 - Medium";
-    const char* const FAN_HIGH  = "3 - High";
-    const char* const FAN_TURBO = "4 - Turbo";
+    const char* const FAN_AUTO     = "0 - Auto";
+    const char* const FAN_LOW      = "1 - Low";
+    const char* const FAN_MED_LOW  = "2 - Med-Low";
+    const char* const FAN_MED      = "3 - Medium";
+    const char* const FAN_MED_HIGH = "4 - Med-High";
+    const char* const FAN_HIGH     = "5 - High";
+    const char* const FAN_TURBO    = "Turbo";
+    const char* const FAN_QUIET    = "Quiet";
 }
 
 /* this must be same as HORIZONTAL_SWING_OPTIONS in climate.py */
