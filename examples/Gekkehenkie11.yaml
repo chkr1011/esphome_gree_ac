@@ -62,6 +62,8 @@ climate:
       name: ${devicename} Display Mode
     display_unit_select:
       name: ${devicename} Display Unit
+    light_switch:
+      name: ${devicename} Light
     plasma_switch:
       name: ${devicename} Plasma
     beeper_switch:

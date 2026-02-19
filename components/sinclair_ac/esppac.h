@@ -23,11 +23,14 @@ static const float TEMPERATURE_TOLERANCE = 2;  // The tolerance to allow when ch
 static const uint8_t TEMPERATURE_THRESHOLD = 100;  // Maximum temperature the AC can report (formally 119.5 for sinclair protocol, but 100 is impossible, soo...)
 
 namespace fan_modes{
-    const char* const FAN_AUTO  = "0 - Auto";
-    const char* const FAN_LOW   = "1 - Low";
-    const char* const FAN_MED   = "2 - Medium";
-    const char* const FAN_HIGH  = "3 - High";
-    const char* const FAN_TURBO = "4 - Turbo";
+    const char* const FAN_AUTO  = "Auto";
+    const char* const FAN_LOW   = "Low";
+    const char* const FAN_MEDL  = "Medium-Low";
+    const char* const FAN_MED   = "Medium";
+    const char* const FAN_MEDH  = "Medium-High";
+    const char* const FAN_HIGH  = "High";
+    const char* const FAN_TURBO = "Turbo";
+    const char* const FAN_QUIET = "Quiet";
 }
 
 /* this must be same as HORIZONTAL_SWING_OPTIONS in climate.py */
@@ -59,8 +62,6 @@ namespace vertical_swing_options{
 
 /* this must be same as DISPLAY_OPTIONS in climate.py */
 namespace display_options{
-    const std::string OFF  = "0 - OFF";
-    const std::string AUTO = "1 - Auto";
     const std::string SET  = "2 - Set temperature";
     const std::string ACT  = "3 - Actual temperature";
     const std::string OUT  = "4 - Outside temperature";
@@ -96,6 +97,7 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
         void set_display_select(select::Select *display_select);
         void set_display_unit_select(select::Select *display_unit_select);
 
+        void set_light_switch(switch_::Switch *light_switch);
         void set_plasma_switch(switch_::Switch *plasma_switch);
         void set_beeper_switch(switch_::Switch *beeper_switch);
         void set_sleep_switch(switch_::Switch *sleep_switch);
@@ -115,6 +117,7 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
         select::Select *display_select_          = nullptr; /* Select for setting display mode */
         select::Select *display_unit_select_     = nullptr; /* Select for setting display temperature unit */
 
+        switch_::Switch *light_switch_           = nullptr; /* Switch for light */
         switch_::Switch *plasma_switch_          = nullptr; /* Switch for plasma */
         switch_::Switch *beeper_switch_          = nullptr; /* Switch for beeper */
         switch_::Switch *sleep_switch_           = nullptr; /* Switch for sleep */
@@ -129,6 +132,7 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
         std::string display_state_;
         std::string display_unit_state_;
 
+        bool light_state_;
         bool plasma_state_;
         bool beeper_state_;
         bool sleep_state_;
@@ -160,6 +164,7 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
         void update_display(const std::string &display);
         void update_display_unit(const std::string &display_unit);
 
+        void update_light(bool light);
         void update_plasma(bool plasma);
         void update_beeper(bool beeper);
         void update_sleep(bool sleep);
@@ -172,6 +177,7 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
         virtual void on_display_change(const std::string &display) = 0;
         virtual void on_display_unit_change(const std::string &display_unit) = 0;
 
+        virtual void on_light_change(bool light) = 0;
         virtual void on_plasma_change(bool plasma) = 0;
         virtual void on_beeper_change(bool beeper) = 0;
         virtual void on_sleep_change(bool sleep) = 0;

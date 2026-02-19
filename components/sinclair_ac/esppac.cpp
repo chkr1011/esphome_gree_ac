@@ -21,10 +21,9 @@ climate::ClimateTraits SinclairAC::traits()
                                 climate::CLIMATE_MODE_HEAT, climate::CLIMATE_MODE_FAN_ONLY, climate::CLIMATE_MODE_DRY});
 
     traits.set_supported_custom_fan_modes({fan_modes::FAN_AUTO, fan_modes::FAN_LOW,
-                                           fan_modes::FAN_MED, fan_modes::FAN_HIGH, fan_modes::FAN_TURBO});
-
-    traits.set_supported_swing_modes({climate::CLIMATE_SWING_OFF, climate::CLIMATE_SWING_BOTH,
-                                      climate::CLIMATE_SWING_VERTICAL, climate::CLIMATE_SWING_HORIZONTAL});
+                                           fan_modes::FAN_MEDL, fan_modes::FAN_MED,
+                                           fan_modes::FAN_MEDH, fan_modes::FAN_HIGH,
+                                           fan_modes::FAN_TURBO, fan_modes::FAN_QUIET});
 
     return traits;
 }
@@ -181,6 +180,16 @@ void SinclairAC::update_display_unit(const std::string &display_unit)
     }
 }
 
+void SinclairAC::update_light(bool light)
+{
+    this->light_state_ = light;
+
+    if (this->light_switch_ != nullptr)
+    {
+        this->light_switch_->publish_state(this->light_state_);
+    }
+}
+
 void SinclairAC::update_plasma(bool plasma)
 {
     this->plasma_state_ = plasma;
@@ -305,6 +314,16 @@ void SinclairAC::set_display_unit_select(select::Select *display_unit_select)
         if (!value.has_value() || *value == this->display_unit_state_)
             return;
         this->on_display_unit_change(*value);
+    });
+}
+
+void SinclairAC::set_light_switch(switch_::Switch *light_switch)
+{
+    this->light_switch_ = light_switch;
+    this->light_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->light_state_)
+            return;
+        this->on_light_change(state);
     });
 }
 

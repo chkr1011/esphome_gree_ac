@@ -48,14 +48,14 @@ namespace protocol {
     static const uint8_t REPORT_FAN_SPD1_MASK  = 0b00001111;
     static const uint8_t REPORT_FAN_SPD1_POS   = 0;
     static const uint8_t REPORT_FAN_SPD2_BYTE  = 4;
-    static const uint8_t REPORT_FAN_SPD2_MASK  = 0b00000011;
+    static const uint8_t REPORT_FAN_SPD2_MASK  = 0b00000111;
     static const uint8_t REPORT_FAN_SPD2_POS   = 0;
     static const uint8_t REPORT_FAN_QUIET_BYTE = 16;
     static const uint8_t REPORT_FAN_QUIET_MASK = 0b00001000;
     static const uint8_t REPORT_FAN_TURBO_BYTE = 6;
     static const uint8_t REPORT_FAN_TURBO_MASK = 0b00000001;
 
-    static const uint8_t REPORT_FAN_MODE_MASK = 0b00000011;
+    static const uint8_t REPORT_FAN_MODE_MASK = 0b00000111;
 
     static const uint8_t REPORT_TEMP_SET_BYTE  = 5;
     static const uint8_t REPORT_TEMP_SET_MASK  = 0b11110000;
@@ -160,6 +160,7 @@ class SinclairACCNT : public SinclairAC {
         void on_display_change(const std::string &display) override;
         void on_display_unit_change(const std::string &display_unit) override;
 
+        void on_light_change(bool light) override;
         void on_plasma_change(bool plasma) override;
         void on_beeper_change(bool beeper) override;
         void on_sleep_change(bool sleep) override;
@@ -198,6 +199,7 @@ class SinclairACCNT : public SinclairAC {
         std::string determine_display();
         std::string determine_display_unit();
 
+        bool determine_light();
         bool determine_plasma();
         bool determine_beeper();
         bool determine_sleep();

@@ -285,73 +285,51 @@ void SinclairACCNT::send_packet()
 
     /* FAN SPEED --------------------------------------------------------------------------- */
     /* below will default to AUTO */
-    uint8_t fanSpeed1 = 0;
-    uint8_t fanSpeed2 = 0;
     bool    fanQuiet  = false;
     bool    fanTurbo  = false;
     if (this->has_custom_fan_mode())
     {
         std::string custom_fan_mode = this->get_custom_fan_mode();
+        uint8_t fan_mode = 0;
 
         if (custom_fan_mode == fan_modes::FAN_AUTO)
         {
-            fanSpeed1 = 0;
-            fanSpeed2 = 0;
-            fanQuiet  = false;
-            fanTurbo  = false;
+            fan_mode = 0;
         }
         else if (custom_fan_mode == fan_modes::FAN_LOW)
         {
-            fanSpeed1 = 1;
-            fanSpeed2 = 1;
-            fanQuiet  = false;
-            fanTurbo  = false;
-            packet[protocol::REPORT_FAN_SPD2_BYTE] |= 1;
+            fan_mode = 1;
         }
-/*        else if (custom_fan_mode == fan_modes::FAN_QUIET)
+        else if (custom_fan_mode == fan_modes::FAN_MEDL)
         {
-            fanSpeed1 = 1;
-            fanSpeed2 = 1;
-            fanQuiet  = true;
-            fanTurbo  = false;
-        } */
+            fan_mode = 2;
+        }
         else if (custom_fan_mode == fan_modes::FAN_MED)
-	{
-            fanSpeed1 = 3;
-            fanSpeed2 = 2;
-            fanQuiet  = false;
-            fanTurbo  = false;
-	    packet[protocol::REPORT_FAN_SPD2_BYTE] |= 2;
+        {
+            fan_mode = 3;
+        }
+        else if (custom_fan_mode == fan_modes::FAN_MEDH)
+        {
+            fan_mode = 4;
         }
         else if (custom_fan_mode == fan_modes::FAN_HIGH)
         {
-            fanSpeed1 = 5;
-            fanSpeed2 = 3;
-            fanQuiet  = false;
-            fanTurbo  = false;
-	    packet[protocol::REPORT_FAN_SPD2_BYTE] |= 3;
+            fan_mode = 5;
         }
         else if (custom_fan_mode == fan_modes::FAN_TURBO)
         {
-            fanSpeed1 = 5;
-            fanSpeed2 = 3;
-            fanQuiet  = false;
+            fan_mode = 5;
             fanTurbo  = true;
         }
-        else
+        else if (custom_fan_mode == fan_modes::FAN_QUIET)
         {
-            fanSpeed1 = 0;
-            fanSpeed2 = 0;
-            fanQuiet  = false;
-            fanTurbo  = false;
+            fan_mode = 1;
+            fanQuiet  = true;
         }
+
+        packet[protocol::REPORT_FAN_SPD2_BYTE] |= (fan_mode << protocol::REPORT_FAN_SPD2_POS);
     }
 
-    // packet[protocol::REPORT_FAN_SPD1_BYTE] |= (fanSpeed1 << protocol::REPORT_FAN_SPD1_POS);
-    // packet[protocol::REPORT_FAN_SPD2_BYTE] |= (fanSpeed2 << protocol::REPORT_FAN_SPD2_POS);
-    
-   
-    
     if (fanTurbo)
     {
         packet[protocol::REPORT_FAN_TURBO_BYTE] |= protocol::REPORT_FAN_TURBO_MASK;
@@ -454,61 +432,23 @@ void SinclairACCNT::send_packet()
     packet[protocol::REPORT_HSWING_BYTE] |= (mode_horizontal_swing << protocol::REPORT_HSWING_POS);
 
     /* DISPLAY --------------------------------------------------------------------------- */
-    uint8_t display_mode = protocol::REPORT_DISP_MODE_AUTO;
-    if (this->display_state_ == display_options::AUTO)
-    {
-        display_mode = protocol::REPORT_DISP_MODE_AUTO;
-        this->display_power_internal_ = true;
-    }
-    else if (this->display_state_ == display_options::SET)
+    uint8_t display_mode = protocol::REPORT_DISP_MODE_SET;
+    if (this->display_state_ == display_options::SET)
     {
         display_mode = protocol::REPORT_DISP_MODE_SET;
-        this->display_power_internal_ = true;
     }
     else if (this->display_state_ == display_options::ACT)
     {
         display_mode = protocol::REPORT_DISP_MODE_ACT;
-        this->display_power_internal_ = true;
     }
     else if (this->display_state_ == display_options::OUT)
     {
         display_mode = protocol::REPORT_DISP_MODE_OUT;
-        this->display_power_internal_ = true;
-    }
-    else if (this->display_state_ == display_options::OFF)
-    {
-        /* we do not want to alter display setting - only turn it off */
-        this->display_power_internal_ = false;
-        if (this->display_mode_internal_ == display_options::AUTO)
-        {
-            display_mode = protocol::REPORT_DISP_MODE_AUTO;
-        }
-        else if (this->display_mode_internal_ == display_options::SET)
-        {
-            display_mode = protocol::REPORT_DISP_MODE_SET;
-        }
-        else if (this->display_mode_internal_ == display_options::ACT)
-        {
-            display_mode = protocol::REPORT_DISP_MODE_ACT;
-        }
-        else if (this->display_mode_internal_ == display_options::OUT)
-        {
-            display_mode = protocol::REPORT_DISP_MODE_OUT;
-        }
-        else
-        {
-            display_mode = protocol::REPORT_DISP_MODE_AUTO;
-        }
-    }
-    else
-    {
-        display_mode = protocol::REPORT_DISP_MODE_AUTO;
-        this->display_power_internal_ = true;
     }
 
     packet[protocol::REPORT_DISP_MODE_BYTE] |= (display_mode << protocol::REPORT_DISP_MODE_POS);
 
-    if (this->display_power_internal_)
+    if (this->light_state_)
     {
         packet[protocol::REPORT_DISP_ON_BYTE] |= protocol::REPORT_DISP_ON_MASK;
     }
@@ -659,7 +599,7 @@ void SinclairACCNT::handle_packet()
 
         // Detect if AC state differs from what we last sent (indicates remote change)
         bool remoteChanged = false;
-        const std::vector<uint8_t> bytes_to_check = {4, 5, 8, 9, 10, 11, 40, 42};
+        const std::vector<uint8_t> bytes_to_check = {4, 5, 6, 8, 9, 10, 11, 16, 18, 40, 42};
         for (uint8_t i : bytes_to_check)
         {
             if (i < 45 && lastpacket[i] != this->serialProcess_.data[i]) {
@@ -759,6 +699,12 @@ bool SinclairACCNT::processUnitReport()
         hasChanged = true;
     }
 
+    bool light = determine_light();
+    if (this->light_state_ != light) {
+        this->update_light(light);
+        hasChanged = true;
+    }
+
     std::string display_unit = determine_display_unit();
     if (this->display_unit_state_ != display_unit) {
         this->update_display_unit(display_unit);
@@ -845,69 +791,32 @@ climate::ClimateMode SinclairACCNT::determine_mode()
 const char* SinclairACCNT::determine_fan_mode()
 {
     /* fan setting has quite complex representation in the packet, brace for it */
-   // uint8_t fanSpeed1 = (this->serialProcess_.data[protocol::REPORT_FAN_SPD1_BYTE]  & protocol::REPORT_FAN_SPD1_MASK) >> protocol::REPORT_FAN_SPD1_POS;
-    //uint8_t fanSpeed2 = (this->serialProcess_.data[protocol::REPORT_FAN_SPD2_BYTE]  & protocol::REPORT_FAN_SPD2_MASK) >> protocol::REPORT_FAN_SPD2_POS;
-    //bool    fanQuiet  = (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK) != 0;
-    
     bool    fanTurbo  = (this->serialProcess_.data[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
+    bool    fanQuiet  = (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK) != 0;
     uint8_t fan_mode = (this->serialProcess_.data[protocol::REPORT_FAN_SPD2_BYTE] & protocol::REPORT_FAN_MODE_MASK);
 
     if (fanTurbo)
         return fan_modes::FAN_TURBO;
-    else if (fan_mode == 0)
+    if (fanQuiet)
+        return fan_modes::FAN_QUIET;
+
+    if (fan_mode == 0)
         return fan_modes::FAN_AUTO;
     else if (fan_mode == 1)
         return fan_modes::FAN_LOW;
     else if (fan_mode == 2)
-        return fan_modes::FAN_MED;
-    else if (fan_mode == 3)
-        return fan_modes::FAN_HIGH;
-    else 
-    {
-        ESP_LOGW(TAG, "Received unknown fan mode");
-        return fan_modes::FAN_AUTO;
-    }
-    
-    /* we have extracted all the data, let's do the processing */
-    /*
-    if      (fanSpeed1 == 0 && fanSpeed2 == 0 && fanQuiet == false && fanTurbo == false)
-    {
-        return fan_modes::FAN_AUTO;
-    }
-    else if (fanSpeed1 == 1 && fanSpeed2 == 1 && fanQuiet == false && fanTurbo == false)
-    {
-        return fan_modes::FAN_LOW;
-    }
-    else if (fanSpeed1 == 1 && fanSpeed2 == 1 && fanQuiet == true  && fanTurbo == false)
-    {
-        return fan_modes::FAN_QUIET;
-    }
-    else if (fanSpeed1 == 2 && fanSpeed2 == 2 && fanQuiet == false && fanTurbo == false)
-    {
         return fan_modes::FAN_MEDL;
-    }
-    else if (fanSpeed1 == 3 && fanSpeed2 == 2 && fanQuiet == false && fanTurbo == false)
-    {
+    else if (fan_mode == 3)
         return fan_modes::FAN_MED;
-    }
-    else if (fanSpeed1 == 4 && fanSpeed2 == 3 && fanQuiet == false && fanTurbo == false)
-    {
+    else if (fan_mode == 4)
         return fan_modes::FAN_MEDH;
-    }
-    else if (fanSpeed1 == 5 && fanSpeed2 == 3 && fanQuiet == false && fanTurbo == false)
-    {
+    else if (fan_mode == 5)
         return fan_modes::FAN_HIGH;
-    }
-    else if (fanSpeed1 == 5 && fanSpeed2 == 3 && fanQuiet == false && fanTurbo == true )
-    {
-        return fan_modes::FAN_TURBO;
-    }
-    else 
+    else
     {
         ESP_LOGW(TAG, "Received unknown fan mode");
         return fan_modes::FAN_AUTO;
     }
-    */
 }
 
 std::string SinclairACCNT::determine_vertical_swing()
@@ -974,35 +883,22 @@ std::string SinclairACCNT::determine_display()
 {
     uint8_t mode = (this->serialProcess_.data[protocol::REPORT_DISP_MODE_BYTE] & protocol::REPORT_DISP_MODE_MASK) >> protocol::REPORT_DISP_MODE_POS;
 
-    this->display_power_internal_ = (this->serialProcess_.data[protocol::REPORT_DISP_ON_BYTE] & protocol::REPORT_DISP_ON_MASK);
-
     switch (mode) {
-        case protocol::REPORT_DISP_MODE_AUTO:
-            this->display_mode_internal_ = display_options::AUTO;
-            break;
         case protocol::REPORT_DISP_MODE_SET:
-            this->display_mode_internal_ = display_options::SET;
-            break;
+            return display_options::SET;
         case protocol::REPORT_DISP_MODE_ACT:
-            this->display_mode_internal_ = display_options::ACT;
-            break;
+            return display_options::ACT;
         case protocol::REPORT_DISP_MODE_OUT:
-            this->display_mode_internal_ = display_options::OUT;
-            break;
+            return display_options::OUT;
+        case protocol::REPORT_DISP_MODE_AUTO:
         default:
-            ESP_LOGW(TAG, "Received unknown display mode");
-            this->display_mode_internal_ = display_options::AUTO;
-            break;
+            return display_options::SET;
     }
+}
 
-    if (this->display_power_internal_)
-    {
-        return this->display_mode_internal_;
-    }
-    else
-    {
-        return display_options::OFF;
-    }
+bool SinclairACCNT::determine_light()
+{
+    return (this->serialProcess_.data[protocol::REPORT_DISP_ON_BYTE] & protocol::REPORT_DISP_ON_MASK) != 0;
 }
 
 std::string SinclairACCNT::determine_display_unit()
@@ -1086,6 +982,17 @@ void SinclairACCNT::on_display_unit_change(const std::string &display_unit)
 
     this->update_ = ACUpdate::UpdateStart;
     this->display_unit_state_ = display_unit;
+}
+
+void SinclairACCNT::on_light_change(bool light)
+{
+    if (this->state_ != ACState::Ready)
+        return;
+
+    ESP_LOGD(TAG, "Setting light");
+
+    this->update_ = ACUpdate::UpdateStart;
+    this->light_state_ = light;
 }
 
 void SinclairACCNT::on_plasma_change(bool plasma)
