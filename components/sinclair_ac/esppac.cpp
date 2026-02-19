@@ -34,6 +34,8 @@ void SinclairAC::setup()
   // Initialize times
     this->init_time_ = millis();
     this->last_packet_sent_ = millis();
+    this->serialProcess_.state = STATE_WAIT_SYNC;
+    this->serialProcess_.last_byte_time = millis();
 
     ESP_LOGI(TAG, "Sinclair AC component v%s starting...", VERSION);
 }
@@ -48,70 +50,68 @@ void SinclairAC::loop()
     read_data();  // Read data from UART (if there is any)
 }
 
-void SinclairAC::read_data()
-{
-    while (available())  // Read while data is available
-    {
-        /* If we had a packet or a packet had not been decoded yet - do not recieve more data */
-        if (this->serialProcess_.state == STATE_COMPLETE)
-        {
-            break;
-        }
-        uint8_t c;
-        this->read_byte(&c);  // Store in receive buffer
+void SinclairAC::read_data() {
+  // Check for timeout of partially received packet
+  if (this->serialProcess_.state != STATE_WAIT_SYNC && this->serialProcess_.state != STATE_COMPLETE &&
+      millis() - this->serialProcess_.last_byte_time > READ_TIMEOUT) {
+    ESP_LOGV(TAG, "Packet reception timeout, resetting state machine");
+    this->serialProcess_.state = STATE_RESTART;
+  }
 
-        if (this->serialProcess_.state == STATE_RESTART)
-        {
-            this->serialProcess_.data.clear();
-            this->serialProcess_.state = STATE_WAIT_SYNC;
-        }
-        
-        this->serialProcess_.data.push_back(c);
-        if (this->serialProcess_.data.size() >= DATA_MAX)
-        {
-            this->serialProcess_.data.clear();
-            continue;
-        }
-        switch (this->serialProcess_.state)
-        {
-            case STATE_WAIT_SYNC:
-                /* Frame begins with 0x7E 0x7E LEN CMD
-                   LEN - frame length in bytes
-                   CMD - command
-                 */
-                if (c != 0x7E && 
-                    this->serialProcess_.data.size() > 2 && 
-                    this->serialProcess_.data[this->serialProcess_.data.size()-2] == 0x7E && 
-                    this->serialProcess_.data[this->serialProcess_.data.size()-3] == 0x7E)
-                {
-                    this->serialProcess_.data.clear();
-
-                    this->serialProcess_.data.push_back(0x7E);
-                    this->serialProcess_.data.push_back(0x7E);
-                    this->serialProcess_.data.push_back(c);
-
-                    this->serialProcess_.frame_size = c;
-                    this->serialProcess_.state = STATE_RECIEVE;
-                }
-                break;
-            case STATE_RECIEVE:
-                this->serialProcess_.frame_size--;
-                if (this->serialProcess_.frame_size == 0)
-                {
-                    /* WE HAVE A FRAME FROM AC */
-                    this->serialProcess_.state = STATE_COMPLETE;
-                }
-                break;
-            case STATE_RESTART:
-            case STATE_COMPLETE:
-                break;
-            default:
-                this->serialProcess_.state = STATE_WAIT_SYNC;
-                this->serialProcess_.data.clear();
-                break;
-        }
-
+  while (available()) {
+    /* If we had a packet or a packet had not been decoded yet - do not receive more data */
+    if (this->serialProcess_.state == STATE_COMPLETE) {
+      break;
     }
+
+    uint8_t c;
+    if (!this->read_byte(&c)) {
+      break;
+    }
+    this->serialProcess_.last_byte_time = millis();
+
+    if (this->serialProcess_.state == STATE_RESTART) {
+      this->serialProcess_.data.clear();
+      this->serialProcess_.state = STATE_WAIT_SYNC;
+    }
+
+    switch (this->serialProcess_.state) {
+      case STATE_WAIT_SYNC:
+        if (c == 0x7E) {
+          if (this->serialProcess_.data.size() < 2) {
+            this->serialProcess_.data.push_back(c);
+          }
+        } else {
+          if (this->serialProcess_.data.size() == 2) {
+            // Found non-0x7E after at least two 0x7E's -> it's the length
+            this->serialProcess_.data.push_back(c);
+            this->serialProcess_.frame_size = c;
+            this->serialProcess_.state = STATE_RECIEVE;
+          } else {
+            // Noise or partial sync, reset
+            this->serialProcess_.data.clear();
+          }
+        }
+        break;
+
+      case STATE_RECIEVE:
+        this->serialProcess_.data.push_back(c);
+        if (this->serialProcess_.data.size() >= (size_t)(this->serialProcess_.frame_size + 3)) {
+          /* WE HAVE A FULL FRAME FROM AC */
+          this->serialProcess_.state = STATE_COMPLETE;
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    if (this->serialProcess_.data.size() >= DATA_MAX) {
+      ESP_LOGW(TAG, "Buffer overflow, resetting state machine");
+      this->serialProcess_.data.clear();
+      this->serialProcess_.state = STATE_WAIT_SYNC;
+    }
+  }
 }
 
 void SinclairAC::update_current_temperature(float temperature)
@@ -265,10 +265,10 @@ void SinclairAC::set_vertical_swing_select(select::Select *vertical_swing_select
 {
     this->vertical_swing_select_ = vertical_swing_select;
     this->vertical_swing_select_->add_on_state_callback([this](size_t index) {
-        std::string value = this->vertical_swing_select_->option_at(index);
-        if (value == this->vertical_swing_state_)
+        auto value = this->vertical_swing_select_->at(index);
+        if (!value.has_value() || *value == this->vertical_swing_state_)
             return;
-        this->on_vertical_swing_change(value);
+        this->on_vertical_swing_change(*value);
     });
 }
 
@@ -276,10 +276,10 @@ void SinclairAC::set_horizontal_swing_select(select::Select *horizontal_swing_se
 {
     this->horizontal_swing_select_ = horizontal_swing_select;
     this->horizontal_swing_select_->add_on_state_callback([this](size_t index) {
-        std::string value = this->horizontal_swing_select_->option_at(index);
-        if (value == this->horizontal_swing_state_)
+        auto value = this->horizontal_swing_select_->at(index);
+        if (!value.has_value() || *value == this->horizontal_swing_state_)
             return;
-        this->on_horizontal_swing_change(value);
+        this->on_horizontal_swing_change(*value);
     });
 }
 
@@ -287,10 +287,10 @@ void SinclairAC::set_display_select(select::Select *display_select)
 {
     this->display_select_ = display_select;
     this->display_select_->add_on_state_callback([this](size_t index) {
-        std::string value = this->display_select_->option_at(index);
-        if (value == this->display_state_)
+        auto value = this->display_select_->at(index);
+        if (!value.has_value() || *value == this->display_state_)
             return;
-        this->on_display_change(value);
+        this->on_display_change(*value);
     });
 }
 
@@ -298,10 +298,10 @@ void SinclairAC::set_display_unit_select(select::Select *display_unit_select)
 {
     this->display_unit_select_ = display_unit_select;
     this->display_unit_select_->add_on_state_callback([this](size_t index) {
-        std::string value = this->display_unit_select_->option_at(index);
-        if (value == this->display_unit_state_)
+        auto value = this->display_unit_select_->at(index);
+        if (!value.has_value() || *value == this->display_unit_state_)
             return;
-        this->on_display_unit_change(value);
+        this->on_display_unit_change(*value);
     });
 }
 

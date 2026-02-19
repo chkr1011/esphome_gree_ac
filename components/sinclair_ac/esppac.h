@@ -82,10 +82,10 @@ typedef enum {
 static const uint8_t DATA_MAX = 200;
 
 typedef struct {
-        std::vector<uint8_t> data;
-        uint8_t data_cnt;
-        uint8_t frame_size;
-        SerialProcessState_t state;
+  std::vector<uint8_t> data;
+  uint8_t frame_size;
+  SerialProcessState_t state;
+  uint32_t last_byte_time;
 } SerialProcess_t;
 
 class SinclairAC : public Component, public uart::UARTDevice, public climate::Climate {

@@ -55,38 +55,38 @@ void SinclairACCNT::loop()
     /* we have a frame from AC */
     if (this->serialProcess_.state == STATE_COMPLETE)
     {
-        /* do not forget to order for restart of the recieve state machine */
-        this->serialProcess_.state = STATE_RESTART;
-        /* mark that we have recieved a response */
-        this->wait_response_ = false;
         /* log for ESPHome debug */
         log_packet(this->serialProcess_.data);
 
-        if (!verify_packet())  /* Verify length, header, counter and checksum */
+        /* mark that we have received a response (even if it might be invalid) */
+        this->wait_response_ = false;
+
+        if (verify_packet())  /* Verify length, header, counter and checksum */
         {
-            return;
+            this->last_packet_received_ = millis();  /* Set the time at which we received our last packet */
+
+            /* A valid recieved packet of accepted type marks module as being ready */
+            if (this->state_ != ACState::Ready)
+            {
+                this->state_ = ACState::Ready;
+                Component::status_clear_error();
+                this->last_packet_sent_ = millis();
+            }
+
+            if (this->update_ == ACUpdate::NoUpdate)
+            {
+                handle_packet(); /* this will update state of components in HA as well as internal settings */
+            }
         }
 
-        this->last_packet_received_ = millis();  /* Set the time at which we received our last packet */
-
-        /* A valid recieved packet of accepted type marks module as being ready */
-        if (this->state_ != ACState::Ready)
-        {
-            this->state_ = ACState::Ready;  
-            Component::status_clear_error();
-            this->last_packet_sent_ = millis();
-        }
-
-        if (this->update_ == ACUpdate::NoUpdate)
-        {
-            handle_packet(); /* this will update state of components in HA as well as internal settings */
-        }
+        /* do not forget to order for restart of the receive state machine */
+        this->serialProcess_.state = STATE_RESTART;
     }
 
-    /* we will send a packet to the AC as a reponse to indicate changes */
+    /* we will send a packet to the AC as a response to indicate changes */
     send_packet();
 
-    /* if there are no packets for 5 seconds - mark module as not ready */
+    /* if there are no packets for some time - mark module as not ready */
     if (millis() - this->last_packet_received_ >= protocol::TIME_TIMEOUT_INACTIVE_MS)
     {
         if (this->state_ != ACState::Initializing)
@@ -179,9 +179,23 @@ void SinclairACCNT::send_packet()
 {
     std::vector<uint8_t> packet(protocol::SET_PACKET_LEN, 0);  /* Initialize packet contents */
 
-    if (this->wait_response_ == true || (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS))
+    if (this->wait_response_)
     {
-        /* do net send packet too often or when we are waiting for report to come */
+        if (millis() - this->last_packet_sent_ < protocol::TIME_WAIT_RESPONSE_TIMEOUT_MS)
+        {
+            /* waiting for report to come */
+            return;
+        }
+        else
+        {
+            ESP_LOGW(TAG, "Timed out waiting for response from AC unit");
+            this->wait_response_ = false;
+        }
+    }
+
+    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
+    {
+        /* do net send packet too often */
         return;
     }
     
@@ -538,8 +552,7 @@ void SinclairACCNT::send_packet()
 
     /* Do the command, length */
 
-
-    for (int i = 0; i < 20; i++)
+    for (size_t i = 0; i < packet.size() && i < sizeof(lastpacket); i++)
          lastpacket[i] = packet[i];
     
     packet.insert(packet.begin(), protocol::CMD_OUT_PARAMS_SET);
@@ -637,54 +650,35 @@ void SinclairACCNT::handle_packet()
 {
     if (this->serialProcess_.data[3] == protocol::CMD_IN_UNIT_REPORT)
     {
-        bool newdata = false;
-        
         /* here we will remove unnecessary elements - header and checksum */
         this->serialProcess_.data.erase(this->serialProcess_.data.begin(), this->serialProcess_.data.begin() + 4); /* remove header */
         this->serialProcess_.data.pop_back();  /* remove checksum */
 
-        for (int i = 4; i < 6; i++)
-        {
-            //ESP_LOGV(TAG, "Stamp1: %lx", lastpacket[i]);
-            //ESP_LOGV(TAG, "Stamp1: %lx", this->serialProcess_.data[i]);
-             if (lastpacket[i] != this->serialProcess_.data[i])
-                 newdata = true;
-        }
-
-        if (lastroomtemp != this->serialProcess_.data[42])
-            newdata = true;
-        lastroomtemp = this->serialProcess_.data[42];
-        
-        for (int i = 8; i < 11; i++)
-        {
-            //ESP_LOGV(TAG, "Stamp1: %lx", lastpacket[i]);
-            //ESP_LOGV(TAG, "Stamp1: %lx", this->serialProcess_.data[i]);
-             if (lastpacket[i] != this->serialProcess_.data[i])
-                 newdata = true;
-        }
-        
         /* now process the data */
-        this->processUnitReport();
+        bool hasChanged = this->processUnitReport();
 
-        //Only send new data to HA if we did not initiate that ourselves!
-        if (newdata || reqmodechange)
+        // Detect if AC state differs from what we last sent (indicates remote change)
+        bool remoteChanged = false;
+        const std::vector<uint8_t> bytes_to_check = {4, 5, 8, 9, 10, 11, 40, 42};
+        for (uint8_t i : bytes_to_check)
         {
-            if (reqmodechange)
-                ESP_LOGD(TAG, "reqmodechange true !");
-            else
-                ESP_LOGD(TAG, "reqmodechange false !");
-                
-                
-            ESP_LOGD(TAG, "New packet !");
-            reqmodechange = false;
-            
+            if (i < 45 && lastpacket[i] != this->serialProcess_.data[i]) {
+                remoteChanged = true;
+                break;
+            }
+        }
+
+        if (hasChanged || remoteChanged || reqmodechange)
+        {
+            ESP_LOGD(TAG, "State update: hasChanged=%d, remoteChanged=%d, reqmodechange=%d", hasChanged, remoteChanged, reqmodechange);
             this->publish_state();
+            reqmodechange = false;
         }
 
     }
     else 
     {
-        ESP_LOGD(TAG, "Received unknown packet");
+        ESP_LOGD(TAG, "Received unknown packet type: 0x%02X", this->serialProcess_.data[3]);
     }
 }
 
@@ -696,65 +690,55 @@ bool SinclairACCNT::processUnitReport()
     bool hasChanged = false;
 
     climate::ClimateMode newMode = determine_mode();
-    if (this->mode != newMode) hasChanged = true;
-    this->mode = newMode;
-
-    const char* newFanMode = determine_fan_mode();
-    if (this->has_custom_fan_mode())
-    {
-        if (this->get_custom_fan_mode() != newFanMode) hasChanged = true;
-    }
-    else
-    {
+    if (this->mode != newMode) {
+        this->mode = newMode;
         hasChanged = true;
     }
-    this->set_custom_fan_mode_(newFanMode);
-    
-    //float newTargetTemperature = (float)(((this->serialProcess_.data[protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS)
-     //   + protocol::REPORT_TEMP_SET_OFF);
 
+    const char* newFanMode = determine_fan_mode();
+    if (!this->has_custom_fan_mode() || this->get_custom_fan_mode() != newFanMode) {
+        this->set_custom_fan_mode_(newFanMode);
+        hasChanged = true;
+    }
+    
     int Temset = (this->serialProcess_.data[protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS;
     bool Temrec = this->serialProcess_.data[protocol::REPORT_DISP_F_BYTE] & protocol::TEMREC_MASK;
 
     float newTargetTemperature = 0;
-    
-    if (Temset < 0 || Temset > 15)
-          ESP_LOGW(TAG, "Invalid Temset reived !");
-    else
+    if (Temset >= 0 && Temset <= 15)
     {
-        if (Temrec)
-            newTargetTemperature = Temrec1[Temset];
-        else
-            newTargetTemperature = Temrec0[Temset];
+        newTargetTemperature = Temrec ? Temrec1[Temset] : Temrec0[Temset];
     }
 
-    if (newTargetTemperature == 0)
-        ESP_LOGW(TAG, "Something went wrong in the temp calcs !");
-    else
+    if (newTargetTemperature != 0 && this->target_temperature != newTargetTemperature)
     {
-        if (this->target_temperature != newTargetTemperature) hasChanged = true;
-        this->update_target_temperature(newTargetTemperature);
+        this->target_temperature = newTargetTemperature;
+        hasChanged = true;
     }
     
     /* if there is no external sensor mapped to represent current temperature we will get data from AC unit */
     if (this->current_temperature_sensor_ == nullptr)
     {
         float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - 40);
-    //    float newCurrentTemperature = (float)(((this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] & protocol::REPORT_TEMP_ACT_MASK) >> protocol::REPORT_TEMP_ACT_POS)
-     //       - protocol::REPORT_TEMP_ACT_OFF) / protocol::REPORT_TEMP_ACT_DIV;
-        if (this->current_temperature != newCurrentTemperature) hasChanged = true;
-        this->update_current_temperature(newCurrentTemperature);
+        if (this->current_temperature != newCurrentTemperature) {
+            this->current_temperature = newCurrentTemperature;
+            hasChanged = true;
+        }
     }
 
     std::string verticalSwing = determine_vertical_swing();
-    std::string horizontalSwing = determine_horizontal_swing();
+    if (this->vertical_swing_state_ != verticalSwing) {
+        this->update_swing_vertical(verticalSwing);
+        hasChanged = true;
+    }
 
-    this->update_swing_vertical(verticalSwing);
-    this->update_swing_horizontal(horizontalSwing);
+    std::string horizontalSwing = determine_horizontal_swing();
+    if (this->horizontal_swing_state_ != horizontalSwing) {
+        this->update_swing_horizontal(horizontalSwing);
+        hasChanged = true;
+    }
 
     climate::ClimateSwingMode newSwingMode;
-    /* update legacy swing mode to somehow represent actual state and support
-       this setting without detailed settings done with additional switches */
     if (verticalSwing == vertical_swing_options::FULL && horizontalSwing == horizontal_swing_options::FULL)
         newSwingMode = climate::CLIMATE_SWING_BOTH;
     else if (verticalSwing == vertical_swing_options::FULL)
@@ -764,16 +748,52 @@ bool SinclairACCNT::processUnitReport()
     else
         newSwingMode = climate::CLIMATE_SWING_OFF;
     
-    if (this->swing_mode != newSwingMode) hasChanged = true;
-    this->swing_mode = newSwingMode;
+    if (this->swing_mode != newSwingMode) {
+        this->swing_mode = newSwingMode;
+        hasChanged = true;
+    }
 
-    this->update_display(determine_display());
-    this->update_display_unit(determine_display_unit());
+    std::string display = determine_display();
+    if (this->display_state_ != display) {
+        this->update_display(display);
+        hasChanged = true;
+    }
 
-    this->update_plasma(determine_plasma());
-    this->update_sleep(determine_sleep());
-    this->update_xfan(determine_xfan());
-    this->update_save(determine_save());
+    std::string display_unit = determine_display_unit();
+    if (this->display_unit_state_ != display_unit) {
+        this->update_display_unit(display_unit);
+        hasChanged = true;
+    }
+
+    bool plasma = determine_plasma();
+    if (this->plasma_state_ != plasma) {
+        this->update_plasma(plasma);
+        hasChanged = true;
+    }
+
+    bool beeper = determine_beeper();
+    if (this->beeper_state_ != beeper) {
+        this->update_beeper(beeper);
+        hasChanged = true;
+    }
+
+    bool sleep = determine_sleep();
+    if (this->sleep_state_ != sleep) {
+        this->update_sleep(sleep);
+        hasChanged = true;
+    }
+
+    bool xfan = determine_xfan();
+    if (this->xfan_state_ != xfan) {
+        this->update_xfan(xfan);
+        hasChanged = true;
+    }
+
+    bool save = determine_save();
+    if (this->save_state_ != save) {
+        this->update_save(save);
+        hasChanged = true;
+    }
 
     return hasChanged;
 }
@@ -1001,6 +1021,10 @@ bool SinclairACCNT::determine_plasma(){
     bool plasma1 = (this->serialProcess_.data[protocol::REPORT_PLASMA1_BYTE] & protocol::REPORT_PLASMA1_MASK) != 0;
     bool plasma2 = (this->serialProcess_.data[protocol::REPORT_PLASMA2_BYTE] & protocol::REPORT_PLASMA2_MASK) != 0;
     return plasma1 || plasma2;
+}
+
+bool SinclairACCNT::determine_beeper(){
+    return (this->serialProcess_.data[protocol::REPORT_BEEPER_BYTE] & protocol::REPORT_BEEPER_MASK) == 0;
 }
 
 bool SinclairACCNT::determine_sleep(){

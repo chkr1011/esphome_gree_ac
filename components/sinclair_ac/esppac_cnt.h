@@ -144,6 +144,7 @@ namespace protocol {
     /* time constraints */
     static const unsigned long TIME_REFRESH_PERIOD_MS   =  300;
     static const unsigned long TIME_TIMEOUT_INACTIVE_MS = 1000;
+    static const unsigned long TIME_WAIT_RESPONSE_TIMEOUT_MS = 1000;
 }
 
 /* Define packets from AC that would be processed by software */
@@ -184,7 +185,6 @@ class SinclairACCNT : public SinclairAC {
 
         bool reqmodechange = false;
         unsigned char lastpacket[60];
-        unsigned char lastroomtemp;
 
         bool verify_packet();
         void handle_packet();
@@ -199,6 +199,7 @@ class SinclairACCNT : public SinclairAC {
         std::string determine_display_unit();
 
         bool determine_plasma();
+        bool determine_beeper();
         bool determine_sleep();
         bool determine_xfan();
         bool determine_save();
