@@ -14,7 +14,7 @@ namespace sinclair_ac {
 
 static const char *const VERSION = "0.0.1";
 
-static const uint8_t READ_TIMEOUT = 20;  // The maximum time to wait before considering a packet complete
+static const uint16_t READ_TIMEOUT = 100;  // The maximum time to wait before considering a packet complete
 
 static const uint8_t MIN_TEMPERATURE = 16;   // Minimum temperature as reported by EWPE SMART APP
 static const uint8_t MAX_TEMPERATURE = 30;   // Maximum temperature as supported by EWPE SMART APP

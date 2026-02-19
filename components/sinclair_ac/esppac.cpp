@@ -52,9 +52,12 @@ void SinclairAC::loop()
 
 void SinclairAC::read_data() {
   // Check for timeout of partially received packet
-  if (this->serialProcess_.state != STATE_WAIT_SYNC && this->serialProcess_.state != STATE_COMPLETE &&
+  if (this->serialProcess_.state != STATE_WAIT_SYNC &&
+      this->serialProcess_.state != STATE_COMPLETE &&
+      this->serialProcess_.state != STATE_RESTART &&
       millis() - this->serialProcess_.last_byte_time > READ_TIMEOUT) {
-    ESP_LOGV(TAG, "Packet reception timeout, resetting state machine");
+    ESP_LOGV(TAG, "Packet reception timeout (state=%d, bytes=%zu), resetting state machine",
+             (int)this->serialProcess_.state, this->serialProcess_.data.size());
     this->serialProcess_.state = STATE_RESTART;
   }
 
