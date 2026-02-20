@@ -5,12 +5,12 @@
 #include "esphome/core/component.h"
 
 namespace esphome {
-namespace sinclair_ac {
+namespace gree_ac {
 
-class SinclairACSelect : public select::Select, public Component {
+class GreeACSelect : public select::Select, public Component {
     protected:
         void control(const std::string &value) override { this->publish_state(value); }
 };
 
-}  // namespace sinclair_ac
+}  // namespace gree_ac
 }  // namespace esphome

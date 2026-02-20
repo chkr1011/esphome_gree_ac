@@ -10,7 +10,7 @@
 
 namespace esphome {
 
-namespace sinclair_ac {
+namespace gree_ac {
 
 static const char *const VERSION = "0.0.1";
 
@@ -20,7 +20,7 @@ static const uint8_t MIN_TEMPERATURE = 16;   // Minimum temperature as reported 
 static const uint8_t MAX_TEMPERATURE = 30;   // Maximum temperature as supported by EWPE SMART APP
 static const float TEMPERATURE_STEP = 1.0;   // Steps the temperature can be set in
 static const float TEMPERATURE_TOLERANCE = 2;  // The tolerance to allow when checking the climate state
-static const uint8_t TEMPERATURE_THRESHOLD = 100;  // Maximum temperature the AC can report (formally 119.5 for sinclair protocol, but 100 is impossible, soo...)
+static const uint8_t TEMPERATURE_THRESHOLD = 100;  // Maximum temperature the AC can report (formally 119.5 for gree protocol, but 100 is impossible, soo...)
 
 namespace fan_modes{
     const char* const FAN_AUTO  = "Auto";
@@ -89,7 +89,7 @@ typedef struct {
   uint32_t last_byte_time;
 } SerialProcess_t;
 
-class SinclairAC : public Component, public uart::UARTDevice, public climate::Climate {
+class GreeAC : public Component, public uart::UARTDevice, public climate::Climate {
     public:
         void set_vertical_swing_select(select::Select *vertical_swing_select);
         void set_horizontal_swing_select(select::Select *horizontal_swing_select);
@@ -189,5 +189,5 @@ class SinclairAC : public Component, public uart::UARTDevice, public climate::Cl
         void log_packet(std::vector<uint8_t> data, bool outgoing = false);
 };
 
-}  // namespace sinclair_ac
+}  // namespace gree_ac
 }  // namespace esphome

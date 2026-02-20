@@ -1,14 +1,14 @@
 // based on: https://github.com/DomiStyle/esphome-panasonic-ac
-#include "esppac.h"
+#include "gree_ac.h"
 
 #include "esphome/core/log.h"
 
 namespace esphome {
-namespace sinclair_ac {
+namespace gree_ac {
 
-static const char *const TAG = "sinclair_ac";
+static const char *const TAG = "gree_ac";
 
-climate::ClimateTraits SinclairAC::traits()
+climate::ClimateTraits GreeAC::traits()
 {
     auto traits = climate::ClimateTraits();
 
@@ -28,7 +28,7 @@ climate::ClimateTraits SinclairAC::traits()
     return traits;
 }
 
-void SinclairAC::setup()
+void GreeAC::setup()
 {
   // Initialize times
     this->init_time_ = millis();
@@ -36,20 +36,20 @@ void SinclairAC::setup()
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
 
-    ESP_LOGI(TAG, "Sinclair AC component v%s starting...", VERSION);
+    ESP_LOGI(TAG, "Gree AC component v%s starting...", VERSION);
 }
 
-void SinclairAC::dump_config() {
-    LOG_CLIMATE("", "Sinclair AC", this);
+void GreeAC::dump_config() {
+    LOG_CLIMATE("", "Gree AC", this);
     ESP_LOGCONFIG(TAG, "  Component Version: %s", VERSION);
 }
 
-void SinclairAC::loop()
+void GreeAC::loop()
 {
     read_data();  // Read data from UART (if there is any)
 }
 
-void SinclairAC::read_data() {
+void GreeAC::read_data() {
   // Check for timeout of partially received packet
   if (this->serialProcess_.state != STATE_WAIT_SYNC &&
       this->serialProcess_.state != STATE_COMPLETE &&
@@ -116,7 +116,7 @@ void SinclairAC::read_data() {
   }
 }
 
-void SinclairAC::update_current_temperature(float temperature)
+void GreeAC::update_current_temperature(float temperature)
 {
     if (temperature > TEMPERATURE_THRESHOLD) {
         ESP_LOGW(TAG, "Received out of range inside temperature: %f", temperature);
@@ -126,7 +126,7 @@ void SinclairAC::update_current_temperature(float temperature)
     this->current_temperature = temperature;
 }
 
-void SinclairAC::update_target_temperature(float temperature)
+void GreeAC::update_target_temperature(float temperature)
 {
     if (temperature > TEMPERATURE_THRESHOLD) {
         ESP_LOGW(TAG, "Received out of range target temperature %.2f", temperature);
@@ -136,7 +136,7 @@ void SinclairAC::update_target_temperature(float temperature)
     this->target_temperature = temperature;
 }
 
-void SinclairAC::update_swing_horizontal(const std::string &swing)
+void GreeAC::update_swing_horizontal(const std::string &swing)
 {
     this->horizontal_swing_state_ = swing;
 
@@ -147,7 +147,7 @@ void SinclairAC::update_swing_horizontal(const std::string &swing)
     }
 }
 
-void SinclairAC::update_swing_vertical(const std::string &swing)
+void GreeAC::update_swing_vertical(const std::string &swing)
 {
     this->vertical_swing_state_ = swing;
 
@@ -158,7 +158,7 @@ void SinclairAC::update_swing_vertical(const std::string &swing)
     }
 }
 
-void SinclairAC::update_display(const std::string &display)
+void GreeAC::update_display(const std::string &display)
 {
     this->display_state_ = display;
 
@@ -169,7 +169,7 @@ void SinclairAC::update_display(const std::string &display)
     }
 }
 
-void SinclairAC::update_display_unit(const std::string &display_unit)
+void GreeAC::update_display_unit(const std::string &display_unit)
 {
     this->display_unit_state_ = display_unit;
 
@@ -180,7 +180,7 @@ void SinclairAC::update_display_unit(const std::string &display_unit)
     }
 }
 
-void SinclairAC::update_light(bool light)
+void GreeAC::update_light(bool light)
 {
     this->light_state_ = light;
 
@@ -190,7 +190,7 @@ void SinclairAC::update_light(bool light)
     }
 }
 
-void SinclairAC::update_plasma(bool plasma)
+void GreeAC::update_plasma(bool plasma)
 {
     this->plasma_state_ = plasma;
 
@@ -200,7 +200,7 @@ void SinclairAC::update_plasma(bool plasma)
     }
 }
 
-void SinclairAC::update_beeper(bool beeper)
+void GreeAC::update_beeper(bool beeper)
 {
     this->beeper_state_ = beeper;
 
@@ -210,7 +210,7 @@ void SinclairAC::update_beeper(bool beeper)
     }
 }
 
-void SinclairAC::update_sleep(bool sleep)
+void GreeAC::update_sleep(bool sleep)
 {
     this->sleep_state_ = sleep;
 
@@ -220,7 +220,7 @@ void SinclairAC::update_sleep(bool sleep)
     }
 }
 
-void SinclairAC::update_xfan(bool xfan)
+void GreeAC::update_xfan(bool xfan)
 {
     this->xfan_state_ = xfan;
 
@@ -230,7 +230,7 @@ void SinclairAC::update_xfan(bool xfan)
     }
 }
 
-void SinclairAC::update_save(bool save)
+void GreeAC::update_save(bool save)
 {
     this->save_state_ = save;
 
@@ -240,7 +240,7 @@ void SinclairAC::update_save(bool save)
     }
 }
 
-climate::ClimateAction SinclairAC::determine_action()
+climate::ClimateAction GreeAC::determine_action()
 {
     if (this->mode == climate::CLIMATE_MODE_OFF) {
         return climate::CLIMATE_ACTION_OFF;
@@ -263,7 +263,7 @@ climate::ClimateAction SinclairAC::determine_action()
  * Sensor handling
  */
 
-void SinclairAC::set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor)
+void GreeAC::set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor)
 {
     this->current_temperature_sensor_ = current_temperature_sensor;
     this->current_temperature_sensor_->add_on_state_callback([this](float state)
@@ -273,7 +273,7 @@ void SinclairAC::set_current_temperature_sensor(sensor::Sensor *current_temperat
         });
 }
 
-void SinclairAC::set_vertical_swing_select(select::Select *vertical_swing_select)
+void GreeAC::set_vertical_swing_select(select::Select *vertical_swing_select)
 {
     this->vertical_swing_select_ = vertical_swing_select;
     this->vertical_swing_select_->add_on_state_callback([this](size_t index) {
@@ -284,7 +284,7 @@ void SinclairAC::set_vertical_swing_select(select::Select *vertical_swing_select
     });
 }
 
-void SinclairAC::set_horizontal_swing_select(select::Select *horizontal_swing_select)
+void GreeAC::set_horizontal_swing_select(select::Select *horizontal_swing_select)
 {
     this->horizontal_swing_select_ = horizontal_swing_select;
     this->horizontal_swing_select_->add_on_state_callback([this](size_t index) {
@@ -295,7 +295,7 @@ void SinclairAC::set_horizontal_swing_select(select::Select *horizontal_swing_se
     });
 }
 
-void SinclairAC::set_display_select(select::Select *display_select)
+void GreeAC::set_display_select(select::Select *display_select)
 {
     this->display_select_ = display_select;
     this->display_select_->add_on_state_callback([this](size_t index) {
@@ -306,7 +306,7 @@ void SinclairAC::set_display_select(select::Select *display_select)
     });
 }
 
-void SinclairAC::set_display_unit_select(select::Select *display_unit_select)
+void GreeAC::set_display_unit_select(select::Select *display_unit_select)
 {
     this->display_unit_select_ = display_unit_select;
     this->display_unit_select_->add_on_state_callback([this](size_t index) {
@@ -317,7 +317,7 @@ void SinclairAC::set_display_unit_select(select::Select *display_unit_select)
     });
 }
 
-void SinclairAC::set_light_switch(switch_::Switch *light_switch)
+void GreeAC::set_light_switch(switch_::Switch *light_switch)
 {
     this->light_switch_ = light_switch;
     this->light_switch_->add_on_state_callback([this](bool state) {
@@ -327,7 +327,7 @@ void SinclairAC::set_light_switch(switch_::Switch *light_switch)
     });
 }
 
-void SinclairAC::set_plasma_switch(switch_::Switch *plasma_switch)
+void GreeAC::set_plasma_switch(switch_::Switch *plasma_switch)
 {
     this->plasma_switch_ = plasma_switch;
     this->plasma_switch_->add_on_state_callback([this](bool state) {
@@ -337,7 +337,7 @@ void SinclairAC::set_plasma_switch(switch_::Switch *plasma_switch)
     });
 }
 
-void SinclairAC::set_beeper_switch(switch_::Switch *beeper_switch)
+void GreeAC::set_beeper_switch(switch_::Switch *beeper_switch)
 {
     this->beeper_switch_ = beeper_switch;
     this->beeper_switch_->add_on_state_callback([this](bool state) {
@@ -347,7 +347,7 @@ void SinclairAC::set_beeper_switch(switch_::Switch *beeper_switch)
     });
 }
 
-void SinclairAC::set_sleep_switch(switch_::Switch *sleep_switch)
+void GreeAC::set_sleep_switch(switch_::Switch *sleep_switch)
 {
     this->sleep_switch_ = sleep_switch;
     this->sleep_switch_->add_on_state_callback([this](bool state) {
@@ -357,7 +357,7 @@ void SinclairAC::set_sleep_switch(switch_::Switch *sleep_switch)
     });
 }
 
-void SinclairAC::set_xfan_switch(switch_::Switch *xfan_switch)
+void GreeAC::set_xfan_switch(switch_::Switch *xfan_switch)
 {
     this->xfan_switch_ = xfan_switch;
     this->xfan_switch_->add_on_state_callback([this](bool state) {
@@ -367,7 +367,7 @@ void SinclairAC::set_xfan_switch(switch_::Switch *xfan_switch)
     });
 }
 
-void SinclairAC::set_save_switch(switch_::Switch *save_switch)
+void GreeAC::set_save_switch(switch_::Switch *save_switch)
 {
     this->save_switch_ = save_switch;
     this->save_switch_->add_on_state_callback([this](bool state) {
@@ -381,7 +381,7 @@ void SinclairAC::set_save_switch(switch_::Switch *save_switch)
  * Debugging
  */
 
-void SinclairAC::log_packet(std::vector<uint8_t> data, bool outgoing)
+void GreeAC::log_packet(std::vector<uint8_t> data, bool outgoing)
 {
     if (outgoing) {
         ESP_LOGV(TAG, "TX: %s", format_hex_pretty(data).c_str());
@@ -390,5 +390,5 @@ void SinclairAC::log_packet(std::vector<uint8_t> data, bool outgoing)
     }
 }
 
-}  // namespace sinclair_ac
+}  // namespace gree_ac
 }  // namespace esphome

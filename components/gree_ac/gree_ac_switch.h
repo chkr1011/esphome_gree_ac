@@ -5,12 +5,12 @@
 #include "esphome/core/component.h"
 
 namespace esphome {
-namespace sinclair_ac {
+namespace gree_ac {
 
-class SinclairACSwitch : public switch_::Switch, public Component {
+class GreeACSwitch : public switch_::Switch, public Component {
     protected:
         void write_state(bool state) override { this->publish_state(state); }
 };
 
-}  // namespace sinclair_ac
+}  // namespace gree_ac
 }  // namespace esphome
