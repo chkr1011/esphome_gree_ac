@@ -82,36 +82,16 @@ DISPLAY_UNIT_OPTIONS = [
 SCHEMA = climate.climate_schema(climate.Climate).extend(
     {
         cv.Optional(CONF_NAME, default="climate"): cv.string_strict,
-        cv.Optional(
-            CONF_HORIZONTAL_SWING_SELECT, default={}
-        ): select.select_schema(SinclairACSelect),
-        cv.Optional(
-            CONF_VERTICAL_SWING_SELECT, default={}
-        ): select.select_schema(SinclairACSelect),
-        cv.Optional(CONF_DISPLAY_SELECT, default={}): select.select_schema(
-            SinclairACSelect
-        ),
-        cv.Optional(
-            CONF_DISPLAY_UNIT_SELECT, default={}
-        ): select.select_schema(SinclairACSelect),
-        cv.Optional(CONF_LIGHT_SWITCH, default={}): switch.switch_schema(
-            SinclairACSwitch
-        ),
-        cv.Optional(CONF_PLASMA_SWITCH, default={}): switch.switch_schema(
-            SinclairACSwitch
-        ),
-        cv.Optional(CONF_BEEPER_SWITCH, default={}): switch.switch_schema(
-            SinclairACSwitch
-        ),
-        cv.Optional(CONF_SLEEP_SWITCH, default={}): switch.switch_schema(
-            SinclairACSwitch
-        ),
-        cv.Optional(CONF_XFAN_SWITCH, default={}): switch.switch_schema(
-            SinclairACSwitch
-        ),
-        cv.Optional(CONF_SAVE_SWITCH, default={}): switch.switch_schema(
-            SinclairACSwitch
-        ),
+        cv.GenerateID(CONF_HORIZONTAL_SWING_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_PLASMA_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_SAVE_SWITCH): cv.declare_id(SinclairACSwitch),
         cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
@@ -130,6 +110,15 @@ async def to_code(config):
     await climate.register_climate(var, config)
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
+
+    def make_sub_conf(id, name):
+        return {
+            CONF_ID: id,
+            CONF_NAME: name,
+            CONF_DISABLED_BY_DEFAULT: False,
+            CONF_INTERNAL: False,
+            CONF_ENTITY_CATEGORY: "",
+        }
 
     selects = [
         (
@@ -153,13 +142,9 @@ async def to_code(config):
         ),
     ]
     for conf_key, name, options, setter in selects:
-        conf = config[conf_key]
-        conf[CONF_NAME] = name
-        conf.setdefault(CONF_DISABLED_BY_DEFAULT, False)
-        conf.setdefault(CONF_INTERNAL, False)
-        conf.setdefault(CONF_ENTITY_CATEGORY, "")
-        sel_var = await select.new_select(conf, options=options)
-        await cg.register_component(sel_var, conf)
+        sel_id = config[conf_key]
+        sel_conf = make_sub_conf(sel_id, name)
+        sel_var = await select.new_select(sel_conf, options=options)
         cg.add(getattr(var, setter)(sel_var))
 
     switches = [
@@ -171,14 +156,11 @@ async def to_code(config):
         (CONF_SAVE_SWITCH, "powersave", "set_save_switch"),
     ]
     for conf_key, name, setter in switches:
-        conf = config[conf_key]
-        conf[CONF_NAME] = name
-        conf.setdefault(CONF_DISABLED_BY_DEFAULT, False)
-        conf.setdefault(CONF_INTERNAL, False)
-        conf.setdefault(CONF_ENTITY_CATEGORY, "")
-        sw_var = cg.new_Pvariable(conf[CONF_ID])
-        await cg.register_component(sw_var, conf)
-        await switch.register_switch(sw_var, conf)
+        sw_id = config[conf_key]
+        sw_conf = make_sub_conf(sw_id, name)
+        sw_var = cg.new_Pvariable(sw_id)
+        await cg.register_component(sw_var, sw_conf)
+        await switch.register_switch(sw_var, sw_conf)
         cg.add(getattr(var, setter)(sw_var))
 
     if CONF_CURRENT_TEMPERATURE_SENSOR in config:
