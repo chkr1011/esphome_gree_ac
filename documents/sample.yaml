@@ -55,24 +55,4 @@ external_components:
 climate:
   - platform: sinclair_ac
     name: ${devicename}
-    horizontal_swing_select:
-      name: ${devicename} Horizontal Swing Mode
-    vertical_swing_select:
-      name: ${devicename} Vertical Swing Mode
-    display_select:
-      name: ${devicename} Display Mode
-    display_unit_select:
-      name: ${devicename} Display Unit
-    light_switch:
-      name: ${devicename} Light
-    plasma_switch:
-      name: ${devicename} Plasma
-    beeper_switch:
-      name: ${devicename} Beeper      
-    sleep_switch:
-      name: ${devicename} Sleep
-    xfan_switch:
-      name: ${devicename} X-fan
-    save_switch:
-      name: ${devicename} Save/8 Heat  
     
