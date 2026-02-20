@@ -1,6 +1,7 @@
 #based on: https://github.com/DomiStyle/esphome-panasonic-ac
 from esphome.const import (
     CONF_ID,
+    CONF_NAME,
 )
 import esphome.codegen as cg
 import esphome.config_validation as cv
@@ -75,25 +76,20 @@ DISPLAY_UNIT_OPTIONS = [
     "F",
 ]
 
-switch_schema = switch.switch_schema(switch.Switch).extend(cv.COMPONENT_SCHEMA).extend(
-    {cv.GenerateID(): cv.declare_id(SinclairACSwitch)}
-)
-select_schema = select.select_schema(select.Select).extend(
-    {cv.GenerateID(CONF_ID): cv.declare_id(SinclairACSelect)}
-)
-
 SCHEMA = climate.climate_schema(climate.Climate).extend(
     {
-        cv.Optional(CONF_HORIZONTAL_SWING_SELECT): select_schema,
-        cv.Optional(CONF_VERTICAL_SWING_SELECT): select_schema,
-        cv.Optional(CONF_DISPLAY_SELECT): select_schema,
-        cv.Optional(CONF_DISPLAY_UNIT_SELECT): select_schema,
-        cv.Optional(CONF_LIGHT_SWITCH): switch_schema,
-        cv.Optional(CONF_PLASMA_SWITCH): switch_schema,
-        cv.Optional(CONF_BEEPER_SWITCH): switch_schema,
-        cv.Optional(CONF_SLEEP_SWITCH): switch_schema,
-        cv.Optional(CONF_XFAN_SWITCH): switch_schema,
-        cv.Optional(CONF_SAVE_SWITCH): switch_schema,
+        cv.Optional(CONF_NAME, default="climate"): cv.string_strict,
+        cv.GenerateID(CONF_HORIZONTAL_SWING_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(SinclairACSelect),
+        cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_PLASMA_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_SAVE_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -101,7 +97,6 @@ CONFIG_SCHEMA = cv.All(
     SCHEMA.extend(
         {
             cv.GenerateID(): cv.declare_id(SinclairACCNT),
-            cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
         }
     ),
 )
@@ -112,39 +107,54 @@ async def to_code(config):
     await climate.register_climate(var, config)
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
-    
-    if CONF_HORIZONTAL_SWING_SELECT in config:
-        conf = config[CONF_HORIZONTAL_SWING_SELECT]
-        hswing_select = await select.new_select(conf, options=HORIZONTAL_SWING_OPTIONS)
-        await cg.register_component(hswing_select, conf)
-        cg.add(var.set_horizontal_swing_select(hswing_select))
 
-    if CONF_VERTICAL_SWING_SELECT in config:
-        conf = config[CONF_VERTICAL_SWING_SELECT]
-        vswing_select = await select.new_select(conf, options=VERTICAL_SWING_OPTIONS)
-        await cg.register_component(vswing_select, conf)
-        cg.add(var.set_vertical_swing_select(vswing_select))
-    
-    if CONF_DISPLAY_SELECT in config:
-        conf = config[CONF_DISPLAY_SELECT]
-        display_select = await select.new_select(conf, options=DISPLAY_OPTIONS)
-        await cg.register_component(display_select, conf)
-        cg.add(var.set_display_select(display_select))
-    
-    if CONF_DISPLAY_UNIT_SELECT in config:
-        conf = config[CONF_DISPLAY_UNIT_SELECT]
-        display_unit_select = await select.new_select(conf, options=DISPLAY_UNIT_OPTIONS)
-        await cg.register_component(display_unit_select, conf)
-        cg.add(var.set_display_unit_select(display_unit_select))
+    selects = [
+        (
+            CONF_HORIZONTAL_SWING_SELECT,
+            "hswing",
+            HORIZONTAL_SWING_OPTIONS,
+            "set_horizontal_swing_select",
+        ),
+        (
+            CONF_VERTICAL_SWING_SELECT,
+            "vswing",
+            VERTICAL_SWING_OPTIONS,
+            "set_vertical_swing_select",
+        ),
+        (CONF_DISPLAY_SELECT, "display_mode", DISPLAY_OPTIONS, "set_display_select"),
+        (
+            CONF_DISPLAY_UNIT_SELECT,
+            "display_unit",
+            DISPLAY_UNIT_OPTIONS,
+            "set_display_unit_select",
+        ),
+    ]
+    for conf_key, name, options, setter in selects:
+        sel_id = config[conf_key]
+        sel_conf = select.select_schema(SinclairACSelect)(
+            {CONF_ID: sel_id, CONF_NAME: name}
+        )
+        sel_var = await select.new_select(sel_conf, options=options)
+        await cg.register_component(sel_var, sel_conf)
+        cg.add(getattr(var, setter)(sel_var))
+
+    switches = [
+        (CONF_LIGHT_SWITCH, "light", "set_light_switch"),
+        (CONF_PLASMA_SWITCH, "health", "set_plasma_switch"),
+        (CONF_BEEPER_SWITCH, "beeper", "set_beeper_switch"),
+        (CONF_SLEEP_SWITCH, "sleep", "set_sleep_switch"),
+        (CONF_XFAN_SWITCH, "xfan", "set_xfan_switch"),
+        (CONF_SAVE_SWITCH, "powersave", "set_save_switch"),
+    ]
+    for conf_key, name, setter in switches:
+        sw_id = config[conf_key]
+        sw_conf = switch.switch_schema(SinclairACSwitch)(
+            {CONF_ID: sw_id, CONF_NAME: name}
+        )
+        sw_var = await switch.new_switch(sw_conf)
+        await cg.register_component(sw_var, sw_conf)
+        cg.add(getattr(var, setter)(sw_var))
 
     if CONF_CURRENT_TEMPERATURE_SENSOR in config:
         sens = await cg.get_variable(config[CONF_CURRENT_TEMPERATURE_SENSOR])
         cg.add(var.set_current_temperature_sensor(sens))
-
-    for s in [CONF_LIGHT_SWITCH, CONF_PLASMA_SWITCH, CONF_BEEPER_SWITCH, CONF_SLEEP_SWITCH, CONF_XFAN_SWITCH, CONF_SAVE_SWITCH]:
-        if s in config:
-            conf = config[s]
-            a_switch = cg.new_Pvariable(conf[CONF_ID])
-            await cg.register_component(a_switch, conf)
-            await switch.register_switch(a_switch, conf)
-            cg.add(getattr(var, f"set_{s}")(a_switch))
