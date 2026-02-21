@@ -459,11 +459,11 @@ void GreeACCNT::send_packet()
         packet[protocol::REPORT_DISP_F_BYTE] |= protocol::REPORT_DISP_F_MASK;
     }
 
-    /* PLASMA --------------------------------------------------------------------------- */
-    if (this->plasma_state_)
+    /* HEALTH --------------------------------------------------------------------------- */
+    if (this->health_state_)
     {
-        packet[protocol::REPORT_PLASMA1_BYTE] |= protocol::REPORT_PLASMA1_MASK;
-        packet[protocol::REPORT_PLASMA2_BYTE] |= protocol::REPORT_PLASMA2_MASK;
+        packet[protocol::REPORT_HEALTH1_BYTE] |= protocol::REPORT_HEALTH1_MASK;
+        packet[protocol::REPORT_HEALTH2_BYTE] |= protocol::REPORT_HEALTH2_MASK;
     }
 
     /* BEEPER --------------------------------------------------------------------------- */
@@ -484,10 +484,10 @@ void GreeACCNT::send_packet()
         packet[protocol::REPORT_XFAN_BYTE] |= protocol::REPORT_XFAN_MASK;
     }
 
-    /* SAVE --------------------------------------------------------------------------- */
-    if (this->save_state_)
+    /* POWERSAVE --------------------------------------------------------------------------- */
+    if (this->powersave_state_)
     {
-        packet[protocol::REPORT_SAVE_BYTE] |= protocol::REPORT_SAVE_MASK;
+        packet[protocol::REPORT_POWERSAVE_BYTE] |= protocol::REPORT_POWERSAVE_MASK;
     }
 
     /* Do the command, length */
@@ -711,9 +711,9 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
-    bool plasma = determine_plasma();
-    if (this->plasma_state_ != plasma) {
-        this->update_plasma(plasma);
+    bool health = determine_health();
+    if (this->health_state_ != health) {
+        this->update_health(health);
         hasChanged = true;
     }
 
@@ -735,9 +735,9 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
-    bool save = determine_save();
-    if (this->save_state_ != save) {
-        this->update_save(save);
+    bool powersave = determine_powersave();
+    if (this->powersave_state_ != powersave) {
+        this->update_powersave(powersave);
         hasChanged = true;
     }
 
@@ -913,10 +913,10 @@ std::string GreeACCNT::determine_display_unit()
     }
 }
 
-bool GreeACCNT::determine_plasma(){
-    bool plasma1 = (this->serialProcess_.data[protocol::REPORT_PLASMA1_BYTE] & protocol::REPORT_PLASMA1_MASK) != 0;
-    bool plasma2 = (this->serialProcess_.data[protocol::REPORT_PLASMA2_BYTE] & protocol::REPORT_PLASMA2_MASK) != 0;
-    return plasma1 || plasma2;
+bool GreeACCNT::determine_health(){
+    bool health1 = (this->serialProcess_.data[protocol::REPORT_HEALTH1_BYTE] & protocol::REPORT_HEALTH1_MASK) != 0;
+    bool health2 = (this->serialProcess_.data[protocol::REPORT_HEALTH2_BYTE] & protocol::REPORT_HEALTH2_MASK) != 0;
+    return health1 || health2;
 }
 
 bool GreeACCNT::determine_beeper(){
@@ -931,8 +931,8 @@ bool GreeACCNT::determine_xfan(){
     return (this->serialProcess_.data[protocol::REPORT_XFAN_BYTE] & protocol::REPORT_XFAN_MASK) != 0;
 }
 
-bool GreeACCNT::determine_save(){
-    return (this->serialProcess_.data[protocol::REPORT_SAVE_BYTE] & protocol::REPORT_SAVE_MASK) != 0;
+bool GreeACCNT::determine_powersave(){
+    return (this->serialProcess_.data[protocol::REPORT_POWERSAVE_BYTE] & protocol::REPORT_POWERSAVE_MASK) != 0;
 }
 
 
@@ -995,15 +995,15 @@ void GreeACCNT::on_light_change(bool light)
     this->light_state_ = light;
 }
 
-void GreeACCNT::on_plasma_change(bool plasma)
+void GreeACCNT::on_health_change(bool health)
 {
     if (this->state_ != ACState::Ready)
         return;
 
-    ESP_LOGD(TAG, "Setting plasma");
+    ESP_LOGD(TAG, "Setting health");
 
     this->update_ = ACUpdate::UpdateStart;
-    this->plasma_state_ = plasma;
+    this->health_state_ = health;
 }
 
 void GreeACCNT::on_beeper_change(bool beeper)
@@ -1039,15 +1039,15 @@ void GreeACCNT::on_xfan_change(bool xfan)
     this->xfan_state_ = xfan;
 }
 
-void GreeACCNT::on_save_change(bool save)
+void GreeACCNT::on_powersave_change(bool powersave)
 {
     if (this->state_ != ACState::Ready)
         return;
 
-    ESP_LOGD(TAG, "Setting save");
+    ESP_LOGD(TAG, "Setting powersave");
 
     this->update_ = ACUpdate::UpdateStart;
-    this->save_state_ = save;
+    this->powersave_state_ = powersave;
 }
 
 }  // namespace CNT

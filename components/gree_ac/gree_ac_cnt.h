@@ -109,19 +109,19 @@ namespace protocol {
     static const uint8_t TEMREC_MASK           = 0b01000000;
     static const uint8_t REPORT_DISP_F_MASK    = 0b10000000;
 
-    static const uint8_t REPORT_PLASMA1_BYTE   = 6;
-    static const uint8_t REPORT_PLASMA1_MASK   = 0b00000100;
-    static const uint8_t REPORT_PLASMA2_BYTE   = 0;
-    static const uint8_t REPORT_PLASMA2_MASK   = 0b00000100;
+    static const uint8_t REPORT_HEALTH1_BYTE     = 6;
+    static const uint8_t REPORT_HEALTH1_MASK     = 0b00000100;
+    static const uint8_t REPORT_HEALTH2_BYTE     = 0;
+    static const uint8_t REPORT_HEALTH2_MASK     = 0b00000100;
 
-    static const uint8_t REPORT_SLEEP_BYTE     = 4;
-    static const uint8_t REPORT_SLEEP_MASK     = 0b00001000;
+    static const uint8_t REPORT_SLEEP_BYTE       = 4;
+    static const uint8_t REPORT_SLEEP_MASK       = 0b00001000;
 
-    static const uint8_t REPORT_XFAN_BYTE      = 6;
-    static const uint8_t REPORT_XFAN_MASK      = 0b00001000;
+    static const uint8_t REPORT_XFAN_BYTE        = 6;
+    static const uint8_t REPORT_XFAN_MASK        = 0b00001000;
 
-    static const uint8_t REPORT_SAVE_BYTE      = 11;
-    static const uint8_t REPORT_SAVE_MASK      = 0b01000000;
+    static const uint8_t REPORT_POWERSAVE_BYTE   = 11;
+    static const uint8_t REPORT_POWERSAVE_MASK   = 0b01000000;
 
     static const uint8_t REPORT_BEEPER_BYTE    = 40;
     static const uint8_t REPORT_BEEPER_MASK    = 0b00000001;
@@ -161,11 +161,11 @@ class GreeACCNT : public GreeAC {
         void on_display_unit_change(const std::string &display_unit) override;
 
         void on_light_change(bool light) override;
-        void on_plasma_change(bool plasma) override;
+        void on_health_change(bool health) override;
         void on_beeper_change(bool beeper) override;
         void on_sleep_change(bool sleep) override;
         void on_xfan_change(bool xfan) override;
-        void on_save_change(bool save) override;
+        void on_powersave_change(bool powersave) override;
 
         void setup() override;
         void loop() override;
@@ -200,11 +200,11 @@ class GreeACCNT : public GreeAC {
         std::string determine_display_unit();
 
         bool determine_light();
-        bool determine_plasma();
+        bool determine_health();
         bool determine_beeper();
         bool determine_sleep();
         bool determine_xfan();
-        bool determine_save();
+        bool determine_powersave();
 };
 
 }  // namespace CNT

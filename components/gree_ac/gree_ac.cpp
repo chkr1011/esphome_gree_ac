@@ -190,13 +190,13 @@ void GreeAC::update_light(bool light)
     }
 }
 
-void GreeAC::update_plasma(bool plasma)
+void GreeAC::update_health(bool health)
 {
-    this->plasma_state_ = plasma;
+    this->health_state_ = health;
 
-    if (this->plasma_switch_ != nullptr)
+    if (this->health_switch_ != nullptr)
     {
-        this->plasma_switch_->publish_state(this->plasma_state_);
+        this->health_switch_->publish_state(this->health_state_);
     }
 }
 
@@ -230,13 +230,13 @@ void GreeAC::update_xfan(bool xfan)
     }
 }
 
-void GreeAC::update_save(bool save)
+void GreeAC::update_powersave(bool powersave)
 {
-    this->save_state_ = save;
+    this->powersave_state_ = powersave;
 
-    if (this->save_switch_ != nullptr)
+    if (this->powersave_switch_ != nullptr)
     {
-        this->save_switch_->publish_state(this->save_state_);
+        this->powersave_switch_->publish_state(this->powersave_state_);
     }
 }
 
@@ -327,13 +327,13 @@ void GreeAC::set_light_switch(switch_::Switch *light_switch)
     });
 }
 
-void GreeAC::set_plasma_switch(switch_::Switch *plasma_switch)
+void GreeAC::set_health_switch(switch_::Switch *health_switch)
 {
-    this->plasma_switch_ = plasma_switch;
-    this->plasma_switch_->add_on_state_callback([this](bool state) {
-        if (state == this->plasma_state_)
+    this->health_switch_ = health_switch;
+    this->health_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->health_state_)
             return;
-        this->on_plasma_change(state);
+        this->on_health_change(state);
     });
 }
 
@@ -367,13 +367,13 @@ void GreeAC::set_xfan_switch(switch_::Switch *xfan_switch)
     });
 }
 
-void GreeAC::set_save_switch(switch_::Switch *save_switch)
+void GreeAC::set_powersave_switch(switch_::Switch *powersave_switch)
 {
-    this->save_switch_ = save_switch;
-    this->save_switch_->add_on_state_callback([this](bool state) {
-        if (state == this->save_state_)
+    this->powersave_switch_ = powersave_switch;
+    this->powersave_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->powersave_state_)
             return;
-        this->on_save_change(state);
+        this->on_powersave_change(state);
     });
 }
 

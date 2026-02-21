@@ -2,6 +2,7 @@
 from esphome.const import (
     CONF_ID,
     CONF_NAME,
+    CONF_ICON,
 )
 import esphome.codegen as cg
 import esphome.config_validation as cv
@@ -31,11 +32,11 @@ CONF_DISPLAY_SELECT             = "display_select"
 CONF_DISPLAY_UNIT_SELECT        = "display_unit_select"
 
 CONF_LIGHT_SWITCH               = "light_switch"
-CONF_PLASMA_SWITCH              = "plasma_switch"
+CONF_HEALTH_SWITCH              = "health_switch"
 CONF_BEEPER_SWITCH              = "beeper_switch"
 CONF_SLEEP_SWITCH               = "sleep_switch"
 CONF_XFAN_SWITCH                = "xfan_switch"
-CONF_SAVE_SWITCH                = "save_switch"
+CONF_POWERSAVE_SWITCH           = "powersave_switch"
 
 CONF_CURRENT_TEMPERATURE_SENSOR = "current_temperature_sensor"
 
@@ -78,17 +79,17 @@ DISPLAY_UNIT_OPTIONS = [
 
 SCHEMA = climate.climate_schema(climate.Climate).extend(
     {
-        cv.Optional(CONF_NAME, default="climate"): cv.string_strict,
+        cv.Optional(CONF_NAME, default="Thermostat"): cv.string_strict,
         cv.GenerateID(CONF_HORIZONTAL_SWING_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(GreeACSwitch),
-        cv.GenerateID(CONF_PLASMA_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_HEALTH_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(GreeACSwitch),
-        cv.GenerateID(CONF_SAVE_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_POWERSAVE_SWITCH): cv.declare_id(GreeACSwitch),
         cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
@@ -111,45 +112,54 @@ async def to_code(config):
     selects = [
         (
             CONF_HORIZONTAL_SWING_SELECT,
-            "hswing",
+            "Horizontal swing",
             HORIZONTAL_SWING_OPTIONS,
             "set_horizontal_swing_select",
+            "mdi:arrow-expand-horizontal",
         ),
         (
             CONF_VERTICAL_SWING_SELECT,
-            "vswing",
+            "Vertical swing",
             VERTICAL_SWING_OPTIONS,
             "set_vertical_swing_select",
+            "mdi:arrow-expand-vertical",
         ),
-        (CONF_DISPLAY_SELECT, "display_mode", DISPLAY_OPTIONS, "set_display_select"),
+        (
+            CONF_DISPLAY_SELECT,
+            "Display mode",
+            DISPLAY_OPTIONS,
+            "set_display_select",
+            "mdi:wrench-cog",
+        ),
         (
             CONF_DISPLAY_UNIT_SELECT,
-            "display_unit",
+            "Display unit",
             DISPLAY_UNIT_OPTIONS,
             "set_display_unit_select",
+            "mdi:wrench-cog",
         ),
     ]
-    for conf_key, name, options, setter in selects:
+    for conf_key, name, options, setter, icon in selects:
         sel_id = config[conf_key]
         sel_conf = select.select_schema(GreeACSelect)(
-            {CONF_ID: sel_id, CONF_NAME: name}
+            {CONF_ID: sel_id, CONF_NAME: name, CONF_ICON: icon}
         )
         sel_var = await select.new_select(sel_conf, options=options)
         await cg.register_component(sel_var, sel_conf)
         cg.add(getattr(var, setter)(sel_var))
 
     switches = [
-        (CONF_LIGHT_SWITCH, "light", "set_light_switch"),
-        (CONF_PLASMA_SWITCH, "health", "set_plasma_switch"),
-        (CONF_BEEPER_SWITCH, "beeper", "set_beeper_switch"),
-        (CONF_SLEEP_SWITCH, "sleep", "set_sleep_switch"),
-        (CONF_XFAN_SWITCH, "xfan", "set_xfan_switch"),
-        (CONF_SAVE_SWITCH, "powersave", "set_save_switch"),
+        (CONF_LIGHT_SWITCH, "Light", "set_light_switch", "mdi:lightbulb-on-outline"),
+        (CONF_HEALTH_SWITCH, "Health", "set_health_switch", "mdi:pine-tree"),
+        (CONF_BEEPER_SWITCH, "Beeper", "set_beeper_switch", "mdi:bell-ring"),
+        (CONF_SLEEP_SWITCH, "Sleep", "set_sleep_switch", "mdi:power-sleep"),
+        (CONF_XFAN_SWITCH, "X-Fan", "set_xfan_switch", "mdi:fan"),
+        (CONF_POWERSAVE_SWITCH, "Powersave", "set_powersave_switch", "mdi:leaf"),
     ]
-    for conf_key, name, setter in switches:
+    for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
         sw_conf = switch.switch_schema(GreeACSwitch)(
-            {CONF_ID: sw_id, CONF_NAME: name}
+            {CONF_ID: sw_id, CONF_NAME: name, CONF_ICON: icon}
         )
         sw_var = await switch.new_switch(sw_conf)
         await cg.register_component(sw_var, sw_conf)
