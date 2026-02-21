@@ -34,7 +34,7 @@ captive_portal:
 
 # Enable logging
 logger:
-  baud_rate: 0 # disable LOG output on UART as UART is used for Sinclair AC unit
+  baud_rate: 0 # disable LOG output on UART as UART is used for Gree AC unit
   level: VERBOSE
 
 uart:
@@ -49,9 +49,9 @@ time:
 external_components:
   - source:
       type: local
-      path: components
-    components: [sinclair_ac]
+      path: ../components
+    components: [gree_ac]
 
 climate:
-  - platform: sinclair_ac
+  - platform: gree_ac
     

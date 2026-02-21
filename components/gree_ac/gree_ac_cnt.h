@@ -1,10 +1,10 @@
 // based on: https://github.com/DomiStyle/esphome-panasonic-ac
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/climate/climate_mode.h"
-#include "esppac.h"
+#include "gree_ac.h"
 
 namespace esphome {
-namespace sinclair_ac {
+namespace gree_ac {
 namespace CNT {
 
 enum class ACState {
@@ -150,7 +150,7 @@ namespace protocol {
 /* Define packets from AC that would be processed by software */
 const std::vector<uint8_t> allowedPackets = {protocol::CMD_IN_UNIT_REPORT};
 
-class SinclairACCNT : public SinclairAC {
+class GreeACCNT : public GreeAC {
     public:
         void control(const climate::ClimateCall &call) override;
 
@@ -208,5 +208,5 @@ class SinclairACCNT : public SinclairAC {
 };
 
 }  // namespace CNT
-}  // namespace sinclair_ac
+}  // namespace gree_ac
 }  // namespace esphome

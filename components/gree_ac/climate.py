@@ -10,18 +10,18 @@ from esphome.components import uart, climate, sensor, select, switch
 AUTO_LOAD = ["switch", "sensor", "select"]
 DEPENDENCIES = ["uart"]
 
-sinclair_ac_ns = cg.esphome_ns.namespace("sinclair_ac")
-SinclairAC = sinclair_ac_ns.class_(
-    "SinclairAC", cg.Component, uart.UARTDevice, climate.Climate
+gree_ac_ns = cg.esphome_ns.namespace("gree_ac")
+GreeAC = gree_ac_ns.class_(
+    "GreeAC", cg.Component, uart.UARTDevice, climate.Climate
 )
-sinclair_ac_cnt_ns = sinclair_ac_ns.namespace("CNT")
-SinclairACCNT = sinclair_ac_cnt_ns.class_("SinclairACCNT", SinclairAC, cg.Component)
+gree_ac_cnt_ns = gree_ac_ns.namespace("CNT")
+GreeACCNT = gree_ac_cnt_ns.class_("GreeACCNT", GreeAC, cg.Component)
 
-SinclairACSwitch = sinclair_ac_ns.class_(
-    "SinclairACSwitch", switch.Switch, cg.Component
+GreeACSwitch = gree_ac_ns.class_(
+    "GreeACSwitch", switch.Switch, cg.Component
 )
-SinclairACSelect = sinclair_ac_ns.class_(
-    "SinclairACSelect", select.Select, cg.Component
+GreeACSelect = gree_ac_ns.class_(
+    "GreeACSelect", select.Select, cg.Component
 )
 
 
@@ -79,16 +79,16 @@ DISPLAY_UNIT_OPTIONS = [
 SCHEMA = climate.climate_schema(climate.Climate).extend(
     {
         cv.Optional(CONF_NAME, default="climate"): cv.string_strict,
-        cv.GenerateID(CONF_HORIZONTAL_SWING_SELECT): cv.declare_id(SinclairACSelect),
-        cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(SinclairACSelect),
-        cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(SinclairACSelect),
-        cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(SinclairACSelect),
-        cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(SinclairACSwitch),
-        cv.GenerateID(CONF_PLASMA_SWITCH): cv.declare_id(SinclairACSwitch),
-        cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(SinclairACSwitch),
-        cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(SinclairACSwitch),
-        cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(SinclairACSwitch),
-        cv.GenerateID(CONF_SAVE_SWITCH): cv.declare_id(SinclairACSwitch),
+        cv.GenerateID(CONF_HORIZONTAL_SWING_SELECT): cv.declare_id(GreeACSelect),
+        cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(GreeACSelect),
+        cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(GreeACSelect),
+        cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(GreeACSelect),
+        cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_PLASMA_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_SAVE_SWITCH): cv.declare_id(GreeACSwitch),
         cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
@@ -96,7 +96,7 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
 CONFIG_SCHEMA = cv.All(
     SCHEMA.extend(
         {
-            cv.GenerateID(): cv.declare_id(SinclairACCNT),
+            cv.GenerateID(): cv.declare_id(GreeACCNT),
         }
     ),
 )
@@ -131,7 +131,7 @@ async def to_code(config):
     ]
     for conf_key, name, options, setter in selects:
         sel_id = config[conf_key]
-        sel_conf = select.select_schema(SinclairACSelect)(
+        sel_conf = select.select_schema(GreeACSelect)(
             {CONF_ID: sel_id, CONF_NAME: name}
         )
         sel_var = await select.new_select(sel_conf, options=options)
@@ -148,7 +148,7 @@ async def to_code(config):
     ]
     for conf_key, name, setter in switches:
         sw_id = config[conf_key]
-        sw_conf = switch.switch_schema(SinclairACSwitch)(
+        sw_conf = switch.switch_schema(GreeACSwitch)(
             {CONF_ID: sw_id, CONF_NAME: name}
         )
         sw_var = await switch.new_switch(sw_conf)

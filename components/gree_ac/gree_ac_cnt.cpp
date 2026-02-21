@@ -1,17 +1,17 @@
 // based on: https://github.com/DomiStyle/esphome-panasonic-ac
-#include "esppac_cnt.h"
+#include "gree_ac_cnt.h"
 #include "esphome/core/log.h"
 
 namespace esphome {
-namespace sinclair_ac {
+namespace gree_ac {
 namespace CNT {
 
-static const char *const TAG = "sinclair_ac.serial";
+static const char *const TAG = "gree_ac.serial";
 
-void SinclairACCNT::setup()
+void GreeACCNT::setup()
 {
-    SinclairAC::setup();
-    ESP_LOGD(TAG, "Using serial protocol for Sinclair AC");
+    GreeAC::setup();
+    ESP_LOGD(TAG, "Using serial protocol for Gree AC");
     Temrec0[0] = 15.5555555555556;
     Temrec0[1] = 16.6666666666667;
     Temrec0[2] = 17.7777777778;
@@ -47,10 +47,10 @@ void SinclairACCNT::setup()
     Temrec1[15] = 31.1111111111111;
 }
 
-void SinclairACCNT::loop()
+void GreeACCNT::loop()
 {
     /* this reads data from UART */
-    SinclairAC::loop();
+    GreeAC::loop();
 
     /* we have a frame from AC */
     if (this->serialProcess_.state == STATE_COMPLETE)
@@ -101,7 +101,7 @@ void SinclairACCNT::loop()
  * ESPHome control request
  */
 
-void SinclairACCNT::control(const climate::ClimateCall &call)
+void GreeACCNT::control(const climate::ClimateCall &call)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -175,7 +175,7 @@ void SinclairACCNT::control(const climate::ClimateCall &call)
 /*
  * Send a raw packet, as is
  */
-void SinclairACCNT::send_packet()
+void GreeACCNT::send_packet()
 {
     std::vector<uint8_t> packet(protocol::SET_PACKET_LEN, 0);  /* Initialize packet contents */
 
@@ -541,7 +541,7 @@ void SinclairACCNT::send_packet()
  * Packet handling
  */
 
-bool SinclairACCNT::verify_packet()
+bool GreeACCNT::verify_packet()
 {
     /* At least 2 sync bytes + length + type + checksum */
     if (this->serialProcess_.data.size() < 5)
@@ -550,9 +550,9 @@ bool SinclairACCNT::verify_packet()
         return false;
     }
 
-    /* The header (aka sync bytes) was checked by SinclairAC::read_data() */
+    /* The header (aka sync bytes) was checked by GreeAC::read_data() */
 
-    /* The frame len was assumed by SinclairAC::read_data() */
+    /* The frame len was assumed by GreeAC::read_data() */
 
     /* Check if this packet type sould be processed */
     bool commandAllowed = false;
@@ -586,7 +586,7 @@ bool SinclairACCNT::verify_packet()
     return true;
 }
 
-void SinclairACCNT::handle_packet()
+void GreeACCNT::handle_packet()
 {
     if (this->serialProcess_.data[3] == protocol::CMD_IN_UNIT_REPORT)
     {
@@ -625,7 +625,7 @@ void SinclairACCNT::handle_packet()
 /*
  * This decodes frame recieved from AC Unit
  */
-bool SinclairACCNT::processUnitReport()
+bool GreeACCNT::processUnitReport()
 {
     bool hasChanged = false;
 
@@ -744,11 +744,11 @@ bool SinclairACCNT::processUnitReport()
     return hasChanged;
 }
 
-climate::ClimateMode SinclairACCNT::determine_mode()
+climate::ClimateMode GreeACCNT::determine_mode()
 {
     uint8_t mode = (this->serialProcess_.data[protocol::REPORT_MODE_BYTE] & protocol::REPORT_MODE_MASK) >> protocol::REPORT_MODE_POS;
 
-    /* as mode presented by climate component incorporates both power and mode we will store this separately for Sinclair
+    /* as mode presented by climate component incorporates both power and mode we will store this separately for Gree
        in _internal_ fields */
     /* check unit power flag */
     this->power_internal_ = (this->serialProcess_.data[protocol::REPORT_PWR_BYTE] & protocol::REPORT_PWR_MASK) != 0;
@@ -788,7 +788,7 @@ climate::ClimateMode SinclairACCNT::determine_mode()
     }
 }
 
-const char* SinclairACCNT::determine_fan_mode()
+const char* GreeACCNT::determine_fan_mode()
 {
     /* fan setting has quite complex representation in the packet, brace for it */
     bool    fanTurbo  = (this->serialProcess_.data[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
@@ -819,7 +819,7 @@ const char* SinclairACCNT::determine_fan_mode()
     }
 }
 
-std::string SinclairACCNT::determine_vertical_swing()
+std::string GreeACCNT::determine_vertical_swing()
 {
     uint8_t mode = (this->serialProcess_.data[protocol::REPORT_VSWING_BYTE]  & protocol::REPORT_VSWING_MASK) >> protocol::REPORT_VSWING_POS;
 
@@ -854,7 +854,7 @@ std::string SinclairACCNT::determine_vertical_swing()
     }
 }
 
-std::string SinclairACCNT::determine_horizontal_swing()
+std::string GreeACCNT::determine_horizontal_swing()
 {
     uint8_t mode = (this->serialProcess_.data[protocol::REPORT_HSWING_BYTE]  & protocol::REPORT_HSWING_MASK) >> protocol::REPORT_HSWING_POS;
 
@@ -879,7 +879,7 @@ std::string SinclairACCNT::determine_horizontal_swing()
     }
 }
 
-std::string SinclairACCNT::determine_display()
+std::string GreeACCNT::determine_display()
 {
     uint8_t mode = (this->serialProcess_.data[protocol::REPORT_DISP_MODE_BYTE] & protocol::REPORT_DISP_MODE_MASK) >> protocol::REPORT_DISP_MODE_POS;
 
@@ -896,12 +896,12 @@ std::string SinclairACCNT::determine_display()
     }
 }
 
-bool SinclairACCNT::determine_light()
+bool GreeACCNT::determine_light()
 {
     return (this->serialProcess_.data[protocol::REPORT_DISP_ON_BYTE] & protocol::REPORT_DISP_ON_MASK) != 0;
 }
 
-std::string SinclairACCNT::determine_display_unit()
+std::string GreeACCNT::determine_display_unit()
 {
     if (this->serialProcess_.data[protocol::REPORT_DISP_F_BYTE] & protocol::REPORT_DISP_F_MASK)
     {
@@ -913,25 +913,25 @@ std::string SinclairACCNT::determine_display_unit()
     }
 }
 
-bool SinclairACCNT::determine_plasma(){
+bool GreeACCNT::determine_plasma(){
     bool plasma1 = (this->serialProcess_.data[protocol::REPORT_PLASMA1_BYTE] & protocol::REPORT_PLASMA1_MASK) != 0;
     bool plasma2 = (this->serialProcess_.data[protocol::REPORT_PLASMA2_BYTE] & protocol::REPORT_PLASMA2_MASK) != 0;
     return plasma1 || plasma2;
 }
 
-bool SinclairACCNT::determine_beeper(){
+bool GreeACCNT::determine_beeper(){
     return (this->serialProcess_.data[protocol::REPORT_BEEPER_BYTE] & protocol::REPORT_BEEPER_MASK) == 0;
 }
 
-bool SinclairACCNT::determine_sleep(){
+bool GreeACCNT::determine_sleep(){
     return (this->serialProcess_.data[protocol::REPORT_SLEEP_BYTE] & protocol::REPORT_SLEEP_MASK) != 0;
 }
 
-bool SinclairACCNT::determine_xfan(){
+bool GreeACCNT::determine_xfan(){
     return (this->serialProcess_.data[protocol::REPORT_XFAN_BYTE] & protocol::REPORT_XFAN_MASK) != 0;
 }
 
-bool SinclairACCNT::determine_save(){
+bool GreeACCNT::determine_save(){
     return (this->serialProcess_.data[protocol::REPORT_SAVE_BYTE] & protocol::REPORT_SAVE_MASK) != 0;
 }
 
@@ -940,7 +940,7 @@ bool SinclairACCNT::determine_save(){
  * Sensor handling
  */
 
-void SinclairACCNT::on_vertical_swing_change(const std::string &swing)
+void GreeACCNT::on_vertical_swing_change(const std::string &swing)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -951,7 +951,7 @@ void SinclairACCNT::on_vertical_swing_change(const std::string &swing)
     this->vertical_swing_state_ = swing;
 }
 
-void SinclairACCNT::on_horizontal_swing_change(const std::string &swing)
+void GreeACCNT::on_horizontal_swing_change(const std::string &swing)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -962,7 +962,7 @@ void SinclairACCNT::on_horizontal_swing_change(const std::string &swing)
     this->horizontal_swing_state_ = swing;
 }
 
-void SinclairACCNT::on_display_change(const std::string &display)
+void GreeACCNT::on_display_change(const std::string &display)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -973,7 +973,7 @@ void SinclairACCNT::on_display_change(const std::string &display)
     this->display_state_ = display;
 }
 
-void SinclairACCNT::on_display_unit_change(const std::string &display_unit)
+void GreeACCNT::on_display_unit_change(const std::string &display_unit)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -984,7 +984,7 @@ void SinclairACCNT::on_display_unit_change(const std::string &display_unit)
     this->display_unit_state_ = display_unit;
 }
 
-void SinclairACCNT::on_light_change(bool light)
+void GreeACCNT::on_light_change(bool light)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -995,7 +995,7 @@ void SinclairACCNT::on_light_change(bool light)
     this->light_state_ = light;
 }
 
-void SinclairACCNT::on_plasma_change(bool plasma)
+void GreeACCNT::on_plasma_change(bool plasma)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1006,7 +1006,7 @@ void SinclairACCNT::on_plasma_change(bool plasma)
     this->plasma_state_ = plasma;
 }
 
-void SinclairACCNT::on_beeper_change(bool beeper)
+void GreeACCNT::on_beeper_change(bool beeper)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1017,7 +1017,7 @@ void SinclairACCNT::on_beeper_change(bool beeper)
     this->beeper_state_ = beeper;
 }
 
-void SinclairACCNT::on_sleep_change(bool sleep)
+void GreeACCNT::on_sleep_change(bool sleep)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1028,7 +1028,7 @@ void SinclairACCNT::on_sleep_change(bool sleep)
     this->sleep_state_ = sleep;
 }
 
-void SinclairACCNT::on_xfan_change(bool xfan)
+void GreeACCNT::on_xfan_change(bool xfan)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1039,7 +1039,7 @@ void SinclairACCNT::on_xfan_change(bool xfan)
     this->xfan_state_ = xfan;
 }
 
-void SinclairACCNT::on_save_change(bool save)
+void GreeACCNT::on_save_change(bool save)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1051,5 +1051,5 @@ void SinclairACCNT::on_save_change(bool save)
 }
 
 }  // namespace CNT
-}  // namespace sinclair_ac
+}  // namespace gree_ac
 }  // namespace esphome
