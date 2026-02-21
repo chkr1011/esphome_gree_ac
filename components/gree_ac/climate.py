@@ -50,35 +50,35 @@ QUIET_OPTIONS = [
 ]
 
 HORIZONTAL_SWING_OPTIONS = [
-    "0 - OFF",
-    "1 - Swing - Full",
-    "2 - Constant - Left",
-    "3 - Constant - Mid-Left",
-    "4 - Constant - Middle",
-    "5 - Constant - Mid-Right",
-    "6 - Constant - Right",
+    "Off",
+    "Swing - Full",
+    "Constant - Left",
+    "Constant - Mid-Left",
+    "Constant - Middle",
+    "Constant - Mid-Right",
+    "Constant - Right",
 ]
 
 
 VERTICAL_SWING_OPTIONS = [
-    "00 - OFF",
-    "01 - Swing - Full",
-    "02 - Swing - Down",
-    "03 - Swing - Mid-Down",
-    "04 - Swing - Middle",
-    "05 - Swing - Mid-Up",
-    "06 - Swing - Up",
-    "07 - Constant - Down",
-    "08 - Constant - Mid-Down",
-    "09 - Constant - Middle",
-    "10 - Constant - Mid-Up",
-    "11 - Constant - Up",
+    "Off",
+    "Swing - Full",
+    "Swing - Down",
+    "Swing - Mid-Down",
+    "Swing - Middle",
+    "Swing - Mid-Up",
+    "Swing - Up",
+    "Constant - Down",
+    "Constant - Mid-Down",
+    "Constant - Middle",
+    "Constant - Mid-Up",
+    "Constant - Up",
 ]
 
 DISPLAY_OPTIONS = [
-    "2 - Set temperature",
-    "3 - Actual temperature",
-    "4 - Outside temperature",
+    "Set temperature",
+    "Actual temperature",
+    "Outside temperature",
 ]
 
 DISPLAY_UNIT_OPTIONS = [

@@ -29,9 +29,9 @@ climate::ClimateTraits GreeAC::traits()
     traits.set_supported_modes({climate::CLIMATE_MODE_OFF, climate::CLIMATE_MODE_AUTO, climate::CLIMATE_MODE_COOL,
                                 climate::CLIMATE_MODE_HEAT, climate::CLIMATE_MODE_FAN_ONLY, climate::CLIMATE_MODE_DRY});
 
-    traits.set_supported_custom_fan_modes({fan_modes::FAN_AUTO, fan_modes::FAN_LOW,
-                                           fan_modes::FAN_MEDL, fan_modes::FAN_MED,
-                                           fan_modes::FAN_MEDH, fan_modes::FAN_HIGH});
+    traits.set_supported_custom_fan_modes({fan_modes::FAN_AUTO, fan_modes::FAN_MIN,
+                                           fan_modes::FAN_LOW, fan_modes::FAN_MED,
+                                           fan_modes::FAN_HIGH, fan_modes::FAN_MAX});
 
     return traits;
 }

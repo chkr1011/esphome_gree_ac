@@ -278,34 +278,41 @@ void GreeACCNT::send_packet()
     if (this->has_custom_fan_mode())
     {
         const auto custom_fan_mode = this->get_custom_fan_mode();
-        uint8_t fan_mode = 0;
+        uint8_t fan_mode_byte4 = 0;
+        uint8_t fan_mode_byte18 = 0x08; // Auto
 
         if (custom_fan_mode == fan_modes::FAN_AUTO)
         {
-            fan_mode = 0;
+            // Already set to defaults
+        }
+        else if (custom_fan_mode == fan_modes::FAN_MIN)
+        {
+            fan_mode_byte4 = 1;
+            fan_mode_byte18 = 0x09;
         }
         else if (custom_fan_mode == fan_modes::FAN_LOW)
         {
-            fan_mode = 1;
-        }
-        else if (custom_fan_mode == fan_modes::FAN_MEDL)
-        {
-            fan_mode = 2;
+            fan_mode_byte4 = 2;
+            fan_mode_byte18 = 0x0A;
         }
         else if (custom_fan_mode == fan_modes::FAN_MED)
         {
-            fan_mode = 3;
-        }
-        else if (custom_fan_mode == fan_modes::FAN_MEDH)
-        {
-            fan_mode = 4;
+            fan_mode_byte4 = 2;
+            fan_mode_byte18 = 0x0B;
         }
         else if (custom_fan_mode == fan_modes::FAN_HIGH)
         {
-            fan_mode = 5;
+            fan_mode_byte4 = 3;
+            fan_mode_byte18 = 0x0C;
+        }
+        else if (custom_fan_mode == fan_modes::FAN_MAX)
+        {
+            fan_mode_byte4 = 3;
+            fan_mode_byte18 = 0x0D;
         }
 
-        payload[protocol::REPORT_FAN_SPD2_BYTE] |= (fan_mode << protocol::REPORT_FAN_SPD2_POS);
+        payload[protocol::REPORT_FAN_SPD2_BYTE] |= (fan_mode_byte4 << protocol::REPORT_FAN_SPD2_POS);
+        payload[protocol::REPORT_FAN_SPD1_BYTE] |= (fan_mode_byte18 << protocol::REPORT_FAN_SPD1_POS);
     }
 
     if (this->turbo_state_)
@@ -784,23 +791,23 @@ climate::ClimateMode GreeACCNT::determine_mode()
 const char* GreeACCNT::determine_fan_mode()
 {
     /* fan setting has quite complex representation in the packet, brace for it */
-    uint8_t fan_mode = (this->serialProcess_.data[protocol::REPORT_FAN_SPD2_BYTE] & protocol::REPORT_FAN_MODE_MASK);
+    uint8_t fan_mode = (this->serialProcess_.data[protocol::REPORT_FAN_SPD1_BYTE] & protocol::REPORT_FAN_SPD1_MASK);
 
-    if (fan_mode == 0)
+    if (fan_mode == 0x08)
         return fan_modes::FAN_AUTO;
-    else if (fan_mode == 1)
+    else if (fan_mode == 0x09)
+        return fan_modes::FAN_MIN;
+    else if (fan_mode == 0x0A)
         return fan_modes::FAN_LOW;
-    else if (fan_mode == 2)
-        return fan_modes::FAN_MEDL;
-    else if (fan_mode == 3)
+    else if (fan_mode == 0x0B)
         return fan_modes::FAN_MED;
-    else if (fan_mode == 4)
-        return fan_modes::FAN_MEDH;
-    else if (fan_mode == 5)
+    else if (fan_mode == 0x0C)
         return fan_modes::FAN_HIGH;
+    else if (fan_mode == 0x0D)
+        return fan_modes::FAN_MAX;
     else
     {
-        ESP_LOGW(TAG, "Received unknown fan mode");
+        ESP_LOGW(TAG, "Received unknown fan mode: %d", fan_mode);
         return fan_modes::FAN_AUTO;
     }
 }
