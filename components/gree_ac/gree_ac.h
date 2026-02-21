@@ -12,15 +12,6 @@ namespace esphome {
 
 namespace gree_ac {
 
-static const char *const VERSION = "0.0.1";
-
-static const uint16_t READ_TIMEOUT = 100;  // The maximum time to wait before considering a packet complete
-
-static const uint8_t MIN_TEMPERATURE = 16;   // Minimum temperature as reported by EWPE SMART APP
-static const uint8_t MAX_TEMPERATURE = 30;   // Maximum temperature as supported by EWPE SMART APP
-static const float TEMPERATURE_STEP = 1.0;   // Steps the temperature can be set in
-static const float TEMPERATURE_TOLERANCE = 2;  // The tolerance to allow when checking the climate state
-static const uint8_t TEMPERATURE_THRESHOLD = 100;  // Maximum temperature the AC can report (formally 119.5 for gree protocol, but 100 is impossible, soo...)
 
 namespace fan_modes{
     const char* const FAN_AUTO  = "Auto";
@@ -79,8 +70,6 @@ typedef enum {
         STATE_COMPLETE,
         STATE_RESTART
 } SerialProcessState_t;
-
-static const uint8_t DATA_MAX = 200;
 
 typedef struct {
   std::vector<uint8_t> data;
@@ -185,6 +174,16 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         void log_packet(const uint8_t *data, size_t len, bool outgoing = false);
         void log_packet(const std::vector<uint8_t> &data, bool outgoing = false);
+
+    protected:
+        static const char *const VERSION;
+        static const uint16_t READ_TIMEOUT;
+        static const uint8_t MIN_TEMPERATURE;
+        static const uint8_t MAX_TEMPERATURE;
+        static const float TEMPERATURE_STEP;
+        static const float TEMPERATURE_TOLERANCE;
+        static const uint8_t TEMPERATURE_THRESHOLD;
+        static const uint8_t DATA_MAX;
 };
 
 }  // namespace gree_ac

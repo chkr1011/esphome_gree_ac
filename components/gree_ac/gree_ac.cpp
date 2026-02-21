@@ -8,6 +8,15 @@ namespace gree_ac {
 
 static const char *const TAG = "gree_ac";
 
+const char *const GreeAC::VERSION = "0.0.1";
+const uint16_t GreeAC::READ_TIMEOUT = 100;
+const uint8_t GreeAC::MIN_TEMPERATURE = 16;
+const uint8_t GreeAC::MAX_TEMPERATURE = 30;
+const float GreeAC::TEMPERATURE_STEP = 1.0;
+const float GreeAC::TEMPERATURE_TOLERANCE = 2;
+const uint8_t GreeAC::TEMPERATURE_THRESHOLD = 100;
+const uint8_t GreeAC::DATA_MAX = 200;
+
 climate::ClimateTraits GreeAC::traits()
 {
     auto traits = climate::ClimateTraits();
