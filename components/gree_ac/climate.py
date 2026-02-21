@@ -79,7 +79,7 @@ DISPLAY_UNIT_OPTIONS = [
 
 SCHEMA = climate.climate_schema(climate.Climate).extend(
     {
-        cv.Optional(CONF_NAME, default="climate"): cv.string_strict,
+        cv.Optional(CONF_NAME, default="Thermostat"): cv.string_strict,
         cv.GenerateID(CONF_HORIZONTAL_SWING_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(GreeACSelect),
@@ -112,28 +112,28 @@ async def to_code(config):
     selects = [
         (
             CONF_HORIZONTAL_SWING_SELECT,
-            "hswing",
+            "Horizontal swing",
             HORIZONTAL_SWING_OPTIONS,
             "set_horizontal_swing_select",
             "mdi:arrow-expand-horizontal",
         ),
         (
             CONF_VERTICAL_SWING_SELECT,
-            "vswing",
+            "Vertical swing",
             VERTICAL_SWING_OPTIONS,
             "set_vertical_swing_select",
             "mdi:arrow-expand-vertical",
         ),
         (
             CONF_DISPLAY_SELECT,
-            "display_mode",
+            "Display mode",
             DISPLAY_OPTIONS,
             "set_display_select",
             "mdi:wrench-cog",
         ),
         (
             CONF_DISPLAY_UNIT_SELECT,
-            "display_unit",
+            "Display unit",
             DISPLAY_UNIT_OPTIONS,
             "set_display_unit_select",
             "mdi:wrench-cog",
@@ -149,12 +149,12 @@ async def to_code(config):
         cg.add(getattr(var, setter)(sel_var))
 
     switches = [
-        (CONF_LIGHT_SWITCH, "light", "set_light_switch", "mdi:lightbulb-on-outline"),
-        (CONF_HEALTH_SWITCH, "health", "set_health_switch", "mdi:pine-tree"),
-        (CONF_BEEPER_SWITCH, "beeper", "set_beeper_switch", "mdi:bell-ring"),
-        (CONF_SLEEP_SWITCH, "sleep", "set_sleep_switch", "mdi:power-sleep"),
-        (CONF_XFAN_SWITCH, "xfan", "set_xfan_switch", "mdi:fan"),
-        (CONF_POWERSAVE_SWITCH, "powersave", "set_powersave_switch", "mdi:leaf"),
+        (CONF_LIGHT_SWITCH, "Light", "set_light_switch", "mdi:lightbulb-on-outline"),
+        (CONF_HEALTH_SWITCH, "Health", "set_health_switch", "mdi:pine-tree"),
+        (CONF_BEEPER_SWITCH, "Beeper", "set_beeper_switch", "mdi:bell-ring"),
+        (CONF_SLEEP_SWITCH, "Sleep", "set_sleep_switch", "mdi:power-sleep"),
+        (CONF_XFAN_SWITCH, "X-Fan", "set_xfan_switch", "mdi:fan"),
+        (CONF_POWERSAVE_SWITCH, "Powersave", "set_powersave_switch", "mdi:leaf"),
     ]
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
