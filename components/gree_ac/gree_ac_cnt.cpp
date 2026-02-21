@@ -119,6 +119,11 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         reqmodechange = true;
         this->update_ = ACUpdate::UpdateStart;
         this->set_custom_fan_mode_(call.get_custom_fan_mode());
+
+        /* Requirement 3: When the fan mode gets changed while turbo is on, the turbo mode must be deactivated.
+           Also for quiet mode. */
+        this->update_turbo(false);
+        this->update_quiet(quiet_options::OFF);
     }
 
     if (call.get_swing_mode().has_value())
@@ -270,8 +275,6 @@ void GreeACCNT::send_packet()
 
     /* FAN SPEED --------------------------------------------------------------------------- */
     /* below will default to AUTO */
-    bool    fanQuiet  = false;
-    bool    fanTurbo  = false;
     if (this->has_custom_fan_mode())
     {
         const auto custom_fan_mode = this->get_custom_fan_mode();
@@ -301,27 +304,22 @@ void GreeACCNT::send_packet()
         {
             fan_mode = 5;
         }
-        else if (custom_fan_mode == fan_modes::FAN_TURBO)
-        {
-            fan_mode = 5;
-            fanTurbo  = true;
-        }
-        else if (custom_fan_mode == fan_modes::FAN_QUIET)
-        {
-            fan_mode = 1;
-            fanQuiet  = true;
-        }
 
         payload[protocol::REPORT_FAN_SPD2_BYTE] |= (fan_mode << protocol::REPORT_FAN_SPD2_POS);
     }
 
-    if (fanTurbo)
+    if (this->turbo_state_)
     {
         payload[protocol::REPORT_FAN_TURBO_BYTE] |= protocol::REPORT_FAN_TURBO_MASK;
     }
-    if (fanQuiet)
+
+    if (this->quiet_state_ == quiet_options::ON)
     {
         payload[protocol::REPORT_FAN_QUIET_BYTE] |= protocol::REPORT_FAN_QUIET_MASK;
+    }
+    else if (this->quiet_state_ == quiet_options::AUTO)
+    {
+        payload[protocol::REPORT_FAN_QUIET_BYTE] |= protocol::REPORT_FAN_QUIET_AUTO_MASK;
     }
 
     /* VERTICAL SWING --------------------------------------------------------------------------- */
@@ -724,6 +722,18 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
+    bool turbo = determine_turbo();
+    if (this->turbo_state_ != turbo) {
+        this->update_turbo(turbo);
+        hasChanged = true;
+    }
+
+    const char* quiet = determine_quiet();
+    if (this->quiet_state_ != quiet) {
+        this->update_quiet(quiet);
+        hasChanged = true;
+    }
+
     return hasChanged;
 }
 
@@ -774,14 +784,7 @@ climate::ClimateMode GreeACCNT::determine_mode()
 const char* GreeACCNT::determine_fan_mode()
 {
     /* fan setting has quite complex representation in the packet, brace for it */
-    bool    fanTurbo  = (this->serialProcess_.data[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
-    bool    fanQuiet  = (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK) != 0;
     uint8_t fan_mode = (this->serialProcess_.data[protocol::REPORT_FAN_SPD2_BYTE] & protocol::REPORT_FAN_MODE_MASK);
-
-    if (fanTurbo)
-        return fan_modes::FAN_TURBO;
-    if (fanQuiet)
-        return fan_modes::FAN_QUIET;
 
     if (fan_mode == 0)
         return fan_modes::FAN_AUTO;
@@ -918,6 +921,18 @@ bool GreeACCNT::determine_powersave(){
     return (this->serialProcess_.data[protocol::REPORT_POWERSAVE_BYTE] & protocol::REPORT_POWERSAVE_MASK) != 0;
 }
 
+bool GreeACCNT::determine_turbo(){
+    return (this->serialProcess_.data[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
+}
+
+const char* GreeACCNT::determine_quiet(){
+    if (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK)
+        return quiet_options::ON;
+    if (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_AUTO_MASK)
+        return quiet_options::AUTO;
+    return quiet_options::OFF;
+}
+
 
 /*
  * Sensor handling
@@ -1031,6 +1046,38 @@ void GreeACCNT::on_powersave_change(bool powersave)
 
     this->update_ = ACUpdate::UpdateStart;
     this->powersave_state_ = powersave;
+}
+
+void GreeACCNT::on_turbo_change(bool turbo)
+{
+    if (this->state_ != ACState::Ready)
+        return;
+
+    ESP_LOGD(TAG, "Setting turbo");
+
+    this->update_ = ACUpdate::UpdateStart;
+    this->turbo_state_ = turbo;
+
+    /* Requirement 1: when turbo gets on, quite must get off. */
+    if (turbo) {
+        this->update_quiet(quiet_options::OFF);
+    }
+}
+
+void GreeACCNT::on_quiet_change(const std::string &quiet)
+{
+    if (this->state_ != ACState::Ready)
+        return;
+
+    ESP_LOGD(TAG, "Setting quiet mode");
+
+    this->update_ = ACUpdate::UpdateStart;
+    this->quiet_state_ = quiet;
+
+    /* Requirement 1: when gets on/auto then turbo must go off. */
+    if (quiet != quiet_options::OFF) {
+        this->update_turbo(false);
+    }
 }
 
 }  // namespace CNT

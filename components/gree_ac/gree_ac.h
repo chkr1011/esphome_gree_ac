@@ -20,8 +20,13 @@ namespace fan_modes{
     const char* const FAN_MED   = "Medium";
     const char* const FAN_MEDH  = "Medium-High";
     const char* const FAN_HIGH  = "High";
-    const char* const FAN_TURBO = "Turbo";
-    const char* const FAN_QUIET = "Quiet";
+}
+
+/* this must be same as QUIET_OPTIONS in climate.py */
+namespace quiet_options{
+    const char* const OFF   = "Off";
+    const char* const ON    = "On";
+    const char* const AUTO  = "Auto";
 }
 
 /* this must be same as HORIZONTAL_SWING_OPTIONS in climate.py */
@@ -92,6 +97,9 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void set_sleep_switch(switch_::Switch *sleep_switch);
         void set_xfan_switch(switch_::Switch *xfan_switch);
         void set_powersave_switch(switch_::Switch *powersave_switch);
+        void set_turbo_switch(switch_::Switch *turbo_switch);
+
+        void set_quiet_select(select::Select *quiet_select);
 
         void set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor);
 
@@ -112,6 +120,9 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         switch_::Switch *sleep_switch_           = nullptr; /* Switch for sleep */
         switch_::Switch *xfan_switch_            = nullptr; /* Switch for X-fan */
         switch_::Switch *powersave_switch_       = nullptr; /* Switch for powersave */
+        switch_::Switch *turbo_switch_           = nullptr; /* Switch for turbo */
+
+        select::Select *quiet_select_            = nullptr; /* Select for quiet mode */
 
         sensor::Sensor *current_temperature_sensor_ = nullptr; /* If user wants to replace reported temperature by an external sensor readout */
 
@@ -120,6 +131,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         std::string display_state_;
         std::string display_unit_state_;
+        std::string quiet_state_;
 
         bool light_state_;
         bool health_state_;
@@ -127,6 +139,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         bool sleep_state_;
         bool xfan_state_;
         bool powersave_state_;
+        bool turbo_state_;
 
         SerialProcess_t serialProcess_;
 
@@ -156,6 +169,8 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void update_sleep(bool sleep);
         void update_xfan(bool xfan);
         void update_powersave(bool powersave);
+        void update_turbo(bool turbo);
+        void update_quiet(const std::string &quiet);
 
         virtual void on_horizontal_swing_change(const std::string &swing) = 0;
         virtual void on_vertical_swing_change(const std::string &swing) = 0;
@@ -169,6 +184,8 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         virtual void on_sleep_change(bool sleep) = 0;
         virtual void on_xfan_change(bool xfan) = 0;
         virtual void on_powersave_change(bool powersave) = 0;
+        virtual void on_turbo_change(bool turbo) = 0;
+        virtual void on_quiet_change(const std::string &quiet) = 0;
 
         climate::ClimateAction determine_action();
 

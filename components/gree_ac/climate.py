@@ -37,8 +37,17 @@ CONF_BEEPER_SWITCH              = "beeper_switch"
 CONF_SLEEP_SWITCH               = "sleep_switch"
 CONF_XFAN_SWITCH                = "xfan_switch"
 CONF_POWERSAVE_SWITCH           = "powersave_switch"
+CONF_TURBO_SWITCH               = "turbo_switch"
+
+CONF_QUIET_SELECT               = "quiet_select"
 
 CONF_CURRENT_TEMPERATURE_SENSOR = "current_temperature_sensor"
+
+QUIET_OPTIONS = [
+    "Off",
+    "On",
+    "Auto",
+]
 
 HORIZONTAL_SWING_OPTIONS = [
     "0 - OFF",
@@ -90,6 +99,8 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_POWERSAVE_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_TURBO_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_QUIET_SELECT): cv.declare_id(GreeACSelect),
         cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
@@ -138,6 +149,13 @@ async def to_code(config):
             "set_display_unit_select",
             "mdi:wrench-cog",
         ),
+        (
+            CONF_QUIET_SELECT,
+            "Quiet",
+            QUIET_OPTIONS,
+            "set_quiet_select",
+            "mdi:headphones",
+        ),
     ]
     for conf_key, name, options, setter, icon in selects:
         sel_id = config[conf_key]
@@ -155,6 +173,7 @@ async def to_code(config):
         (CONF_SLEEP_SWITCH, "Sleep", "set_sleep_switch", "mdi:power-sleep"),
         (CONF_XFAN_SWITCH, "X-Fan", "set_xfan_switch", "mdi:fan"),
         (CONF_POWERSAVE_SWITCH, "Powersave", "set_powersave_switch", "mdi:leaf"),
+        (CONF_TURBO_SWITCH, "Turbo", "set_turbo_switch", "mdi:car-turbocharger"),
     ]
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]

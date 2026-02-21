@@ -1,0 +1,24 @@
+esphome:
+  name: test_config
+
+esp8266:
+  board: esp01_1m
+
+logger:
+  baud_rate: 0
+
+uart:
+  tx_pin: 1
+  rx_pin: 3
+  baud_rate: 4800
+  parity: EVEN
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [gree_ac]
+
+climate:
+  - platform: gree_ac
+    name: "Test AC"

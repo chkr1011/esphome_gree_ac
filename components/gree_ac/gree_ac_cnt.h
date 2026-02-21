@@ -52,6 +52,7 @@ namespace protocol {
     static const uint8_t REPORT_FAN_SPD2_POS   = 0;
     static const uint8_t REPORT_FAN_QUIET_BYTE = 16;
     static const uint8_t REPORT_FAN_QUIET_MASK = 0b00001000;
+    static const uint8_t REPORT_FAN_QUIET_AUTO_MASK = 0b00000100;
     static const uint8_t REPORT_FAN_TURBO_BYTE = 6;
     static const uint8_t REPORT_FAN_TURBO_MASK = 0b00000001;
 
@@ -163,6 +164,8 @@ class GreeACCNT : public GreeAC {
         void on_sleep_change(bool sleep) override;
         void on_xfan_change(bool xfan) override;
         void on_powersave_change(bool powersave) override;
+        void on_turbo_change(bool turbo) override;
+        void on_quiet_change(const std::string &quiet) override;
 
         void setup() override;
         void loop() override;
@@ -202,6 +205,8 @@ class GreeACCNT : public GreeAC {
         bool determine_sleep();
         bool determine_xfan();
         bool determine_powersave();
+        bool determine_turbo();
+        const char* determine_quiet();
 };
 
 }  // namespace CNT
