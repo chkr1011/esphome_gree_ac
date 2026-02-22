@@ -476,6 +476,12 @@ void GreeACCNT::send_packet()
         payload[protocol::REPORT_POWERSAVE_BYTE] |= protocol::REPORT_POWERSAVE_MASK;
     }
 
+    /* IFEEL --------------------------------------------------------------------------- */
+    if (this->ifeel_state_)
+    {
+        payload[protocol::REPORT_IFEEL_BYTE] |= protocol::REPORT_IFEEL_MASK;
+    }
+
     /* Do the command, length */
 
     memcpy(this->lastpacket, payload, protocol::SET_PACKET_LEN);
@@ -731,6 +737,12 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
+    bool ifeel = determine_ifeel();
+    if (this->ifeel_state_ != ifeel) {
+        this->update_ifeel(ifeel);
+        hasChanged = true;
+    }
+
     const char* quiet = determine_quiet();
     if (this->quiet_state_ != quiet) {
         this->update_quiet(quiet);
@@ -928,6 +940,10 @@ bool GreeACCNT::determine_turbo(){
     return (this->serialProcess_.data[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
 }
 
+bool GreeACCNT::determine_ifeel(){
+    return (this->serialProcess_.data[protocol::REPORT_IFEEL_BYTE] & protocol::REPORT_IFEEL_MASK) != 0;
+}
+
 const char* GreeACCNT::determine_quiet(){
     if (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK)
         return quiet_options::ON;
@@ -1065,6 +1081,17 @@ void GreeACCNT::on_turbo_change(bool turbo)
     if (turbo) {
         this->update_quiet(quiet_options::OFF);
     }
+}
+
+void GreeACCNT::on_ifeel_change(bool ifeel)
+{
+    if (this->state_ != ACState::Ready)
+        return;
+
+    ESP_LOGD(TAG, "Setting ifeel");
+
+    this->update_ = ACUpdate::UpdateStart;
+    this->ifeel_state_ = ifeel;
 }
 
 void GreeACCNT::on_quiet_change(const std::string &quiet)

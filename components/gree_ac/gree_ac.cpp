@@ -259,6 +259,16 @@ void GreeAC::update_turbo(bool turbo)
     }
 }
 
+void GreeAC::update_ifeel(bool ifeel)
+{
+    this->ifeel_state_ = ifeel;
+
+    if (this->ifeel_switch_ != nullptr)
+    {
+        this->ifeel_switch_->publish_state(this->ifeel_state_);
+    }
+}
+
 void GreeAC::update_quiet(const std::string &quiet)
 {
     this->quiet_state_ = quiet;
@@ -414,6 +424,16 @@ void GreeAC::set_turbo_switch(switch_::Switch *turbo_switch)
         if (state == this->turbo_state_)
             return;
         this->on_turbo_change(state);
+    });
+}
+
+void GreeAC::set_ifeel_switch(switch_::Switch *ifeel_switch)
+{
+    this->ifeel_switch_ = ifeel_switch;
+    this->ifeel_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->ifeel_state_)
+            return;
+        this->on_ifeel_change(state);
     });
 }
 

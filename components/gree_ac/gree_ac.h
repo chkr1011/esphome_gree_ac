@@ -97,6 +97,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void set_xfan_switch(switch_::Switch *xfan_switch);
         void set_powersave_switch(switch_::Switch *powersave_switch);
         void set_turbo_switch(switch_::Switch *turbo_switch);
+        void set_ifeel_switch(switch_::Switch *ifeel_switch);
 
         void set_quiet_select(select::Select *quiet_select);
 
@@ -120,6 +121,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         switch_::Switch *xfan_switch_            = nullptr; /* Switch for X-fan */
         switch_::Switch *powersave_switch_       = nullptr; /* Switch for powersave */
         switch_::Switch *turbo_switch_           = nullptr; /* Switch for turbo */
+        switch_::Switch *ifeel_switch_           = nullptr; /* Switch for I-Feel */
 
         select::Select *quiet_select_            = nullptr; /* Select for quiet mode */
 
@@ -139,6 +141,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         bool xfan_state_;
         bool powersave_state_;
         bool turbo_state_;
+        bool ifeel_state_;
 
         SerialProcess_t serialProcess_;
 
@@ -169,6 +172,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void update_xfan(bool xfan);
         void update_powersave(bool powersave);
         void update_turbo(bool turbo);
+        void update_ifeel(bool ifeel);
         void update_quiet(const std::string &quiet);
 
         virtual void on_horizontal_swing_change(const std::string &swing) = 0;
@@ -184,6 +188,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         virtual void on_xfan_change(bool xfan) = 0;
         virtual void on_powersave_change(bool powersave) = 0;
         virtual void on_turbo_change(bool turbo) = 0;
+        virtual void on_ifeel_change(bool ifeel) = 0;
         virtual void on_quiet_change(const std::string &quiet) = 0;
 
         climate::ClimateAction determine_action();

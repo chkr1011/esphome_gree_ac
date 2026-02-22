@@ -124,6 +124,9 @@ namespace protocol {
     static const uint8_t REPORT_POWERSAVE_BYTE   = 11;
     static const uint8_t REPORT_POWERSAVE_MASK   = 0b01000000;
 
+    static const uint8_t REPORT_IFEEL_BYTE       = 9;
+    static const uint8_t REPORT_IFEEL_MASK       = 0b01000000;
+
     static const uint8_t REPORT_BEEPER_BYTE    = 40;
     static const uint8_t REPORT_BEEPER_MASK    = 0b00000001;
 
@@ -165,6 +168,7 @@ class GreeACCNT : public GreeAC {
         void on_xfan_change(bool xfan) override;
         void on_powersave_change(bool powersave) override;
         void on_turbo_change(bool turbo) override;
+        void on_ifeel_change(bool ifeel) override;
         void on_quiet_change(const std::string &quiet) override;
 
         void setup() override;
@@ -206,6 +210,7 @@ class GreeACCNT : public GreeAC {
         bool determine_xfan();
         bool determine_powersave();
         bool determine_turbo();
+        bool determine_ifeel();
         const char* determine_quiet();
 };
 
