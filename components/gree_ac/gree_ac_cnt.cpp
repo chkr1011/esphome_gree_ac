@@ -9,20 +9,8 @@ namespace CNT {
 
 static const char *const TAG = "gree_ac.serial";
 
-static const double TEMREC0[16] = {
-    15.5555555555556, 16.6666666666667, 17.7777777778, 18.8888888889, 20.0, 20.5555555556,
-    21.6666666667, 22.7777777778, 23.8888888889, 25.0, 25.5555555556, 26.6666666667,
-    27.7777777778, 28.8888888889, 30.0, 30.5555555556
-};
-
-static const double TEMREC1[16] = {
-    16.1111111111111, 17.2222222222222, 18.3333333333333, 19.4444444444444, 0.0, 21.1111111111,
-    22.2222222222222, 23.3333333333, 24.4444444444, 0.0, 26.1111111111111, 27.2222222222222,
-    28.3333333333, 29.4444444444, 0.0, 31.1111111111111
-};
-
 static const uint8_t ALLOWED_PACKETS[] = {protocol::CMD_IN_UNIT_REPORT};
-static const uint8_t BYTES_TO_CHECK[] = {4, 5, 6, 8, 9, 10, 11, 16, 18, 40, 42};
+static const uint8_t BYTES_TO_CHECK[] = {4, 5, 6, 8, 9, 11, 16, 18, 40};
 
 void GreeACCNT::setup()
 {
@@ -264,14 +252,8 @@ void GreeACCNT::send_packet()
     }
 
     /* TARGET TEMPERATURE --------------------------------------------------------------------------- */
-    uint8_t temptemp = static_cast<uint8_t>(round(this->target_temperature));
-    uint8_t target_temperature = ((temptemp - protocol::REPORT_TEMP_SET_OFF) << protocol::REPORT_TEMP_SET_POS);
-    payload[protocol::REPORT_TEMP_SET_BYTE] |= (target_temperature & protocol::REPORT_TEMP_SET_MASK);
-
-    if (this->target_temperature - (float)temptemp > 0)
-    {
-         payload[protocol::REPORT_DISP_F_BYTE] |= protocol::TEMREC_MASK;
-    }
+    uint8_t target_temperature = static_cast<uint8_t>(round(this->target_temperature));
+    payload[protocol::REPORT_TEMP_SET_BYTE] |= ((target_temperature - protocol::REPORT_TEMP_SET_OFF) << protocol::REPORT_TEMP_SET_POS) & protocol::REPORT_TEMP_SET_MASK;
 
     /* FAN SPEED --------------------------------------------------------------------------- */
     /* below will default to AUTO */
@@ -592,9 +574,17 @@ void GreeACCNT::handle_packet()
         bool remoteChanged = false;
         for (uint8_t i : BYTES_TO_CHECK)
         {
-            if (i < 45 && lastpacket[i] != this->serialProcess_.data[i]) {
-                remoteChanged = true;
-                break;
+            if (i < 45) {
+                uint8_t last = lastpacket[i];
+                uint8_t current = this->serialProcess_.data[i];
+                if (i == protocol::SET_NOCHANGE_BYTE) {
+                    last &= ~protocol::SET_NOCHANGE_MASK;
+                    current &= ~protocol::SET_NOCHANGE_MASK;
+                }
+                if (last != current) {
+                    remoteChanged = true;
+                    break;
+                }
             }
         }
 
@@ -631,16 +621,10 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
     
-    int Temset = (this->serialProcess_.data[protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS;
-    bool Temrec = this->serialProcess_.data[protocol::REPORT_DISP_F_BYTE] & protocol::TEMREC_MASK;
+    uint8_t temset = (this->serialProcess_.data[protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS;
+    float newTargetTemperature = (float)(temset + protocol::REPORT_TEMP_SET_OFF);
 
-    float newTargetTemperature = 0;
-    if (Temset >= 0 && Temset <= 15)
-    {
-        newTargetTemperature = Temrec ? TEMREC1[Temset] : TEMREC0[Temset];
-    }
-
-    if (newTargetTemperature != 0 && this->target_temperature != newTargetTemperature)
+    if (this->target_temperature != newTargetTemperature)
     {
         this->target_temperature = newTargetTemperature;
         hasChanged = true;
@@ -649,7 +633,7 @@ bool GreeACCNT::processUnitReport()
     /* if there is no external sensor mapped to represent current temperature we will get data from AC unit */
     if (this->current_temperature_sensor_ == nullptr)
     {
-        float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - 40);
+        float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF);
         if (this->current_temperature != newCurrentTemperature) {
             this->current_temperature = newCurrentTemperature;
             hasChanged = true;
