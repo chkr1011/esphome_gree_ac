@@ -431,10 +431,6 @@ void GreeACCNT::send_packet()
     {
         display_mode = protocol::REPORT_DISP_MODE_ACT;
     }
-    else if (this->display_state_ == display_options::OUT)
-    {
-        display_mode = protocol::REPORT_DISP_MODE_OUT;
-    }
 
     payload[protocol::REPORT_DISP_MODE_BYTE] |= (display_mode << protocol::REPORT_DISP_MODE_POS);
 
@@ -882,8 +878,8 @@ const char* GreeACCNT::determine_display()
         case protocol::REPORT_DISP_MODE_ACT:
             return display_options::ACT;
         case protocol::REPORT_DISP_MODE_OUT:
-            return display_options::OUT;
-        case protocol::REPORT_DISP_MODE_AUTO:
+            ESP_LOGW(TAG, "Outside temperature display mode is not supported and was requested by the unit. Falling back to Set temperature.");
+            return display_options::SET;
         default:
             return display_options::SET;
     }
