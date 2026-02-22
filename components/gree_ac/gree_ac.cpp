@@ -199,13 +199,13 @@ void GreeAC::update_light(bool light)
     }
 }
 
-void GreeAC::update_health(bool health)
+void GreeAC::update_ionizer(bool ionizer)
 {
-    this->health_state_ = health;
+    this->ionizer_state_ = ionizer;
 
-    if (this->health_switch_ != nullptr)
+    if (this->ionizer_switch_ != nullptr)
     {
-        this->health_switch_->publish_state(this->health_state_);
+        this->ionizer_switch_->publish_state(this->ionizer_state_);
     }
 }
 
@@ -367,13 +367,13 @@ void GreeAC::set_light_switch(switch_::Switch *light_switch)
     });
 }
 
-void GreeAC::set_health_switch(switch_::Switch *health_switch)
+void GreeAC::set_ionizer_switch(switch_::Switch *ionizer_switch)
 {
-    this->health_switch_ = health_switch;
-    this->health_switch_->add_on_state_callback([this](bool state) {
-        if (state == this->health_state_)
+    this->ionizer_switch_ = ionizer_switch;
+    this->ionizer_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->ionizer_state_)
             return;
-        this->on_health_change(state);
+        this->on_ionizer_change(state);
     });
 }
 

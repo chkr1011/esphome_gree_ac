@@ -91,7 +91,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void set_display_unit_select(select::Select *display_unit_select);
 
         void set_light_switch(switch_::Switch *light_switch);
-        void set_health_switch(switch_::Switch *health_switch);
+        void set_ionizer_switch(switch_::Switch *ionizer_switch);
         void set_beeper_switch(switch_::Switch *beeper_switch);
         void set_sleep_switch(switch_::Switch *sleep_switch);
         void set_xfan_switch(switch_::Switch *xfan_switch);
@@ -115,7 +115,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         select::Select *display_unit_select_     = nullptr; /* Select for setting display temperature unit */
 
         switch_::Switch *light_switch_           = nullptr; /* Switch for light */
-        switch_::Switch *health_switch_          = nullptr; /* Switch for health */
+        switch_::Switch *ionizer_switch_         = nullptr; /* Switch for ionizer */
         switch_::Switch *beeper_switch_          = nullptr; /* Switch for beeper */
         switch_::Switch *sleep_switch_           = nullptr; /* Switch for sleep */
         switch_::Switch *xfan_switch_            = nullptr; /* Switch for X-fan */
@@ -135,7 +135,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         std::string quiet_state_;
 
         bool light_state_;
-        bool health_state_;
+        bool ionizer_state_;
         bool beeper_state_;
         bool sleep_state_;
         bool xfan_state_;
@@ -166,7 +166,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void update_display_unit(const std::string &display_unit);
 
         void update_light(bool light);
-        void update_health(bool health);
+        void update_ionizer(bool ionizer);
         void update_beeper(bool beeper);
         void update_sleep(bool sleep);
         void update_xfan(bool xfan);
@@ -182,7 +182,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         virtual void on_display_unit_change(const std::string &display_unit) = 0;
 
         virtual void on_light_change(bool light) = 0;
-        virtual void on_health_change(bool health) = 0;
+        virtual void on_ionizer_change(bool ionizer) = 0;
         virtual void on_beeper_change(bool beeper) = 0;
         virtual void on_sleep_change(bool sleep) = 0;
         virtual void on_xfan_change(bool xfan) = 0;

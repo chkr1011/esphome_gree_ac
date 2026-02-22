@@ -445,11 +445,11 @@ void GreeACCNT::send_packet()
         payload[protocol::REPORT_DISP_F_BYTE] |= protocol::REPORT_DISP_F_MASK;
     }
 
-    /* HEALTH --------------------------------------------------------------------------- */
-    if (this->health_state_)
+    /* IONIZER -------------------------------------------------------------------------- */
+    if (this->ionizer_state_)
     {
-        payload[protocol::REPORT_HEALTH1_BYTE] |= protocol::REPORT_HEALTH1_MASK;
-        payload[protocol::REPORT_HEALTH2_BYTE] |= protocol::REPORT_HEALTH2_MASK;
+        payload[protocol::REPORT_IONIZER1_BYTE] |= protocol::REPORT_IONIZER1_MASK;
+        payload[protocol::REPORT_IONIZER2_BYTE] |= protocol::REPORT_IONIZER2_MASK;
     }
 
     /* BEEPER --------------------------------------------------------------------------- */
@@ -701,9 +701,9 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
-    bool health = determine_health();
-    if (this->health_state_ != health) {
-        this->update_health(health);
+    bool ionizer = determine_ionizer();
+    if (this->ionizer_state_ != ionizer) {
+        this->update_ionizer(ionizer);
         hasChanged = true;
     }
 
@@ -914,10 +914,10 @@ const char* GreeACCNT::determine_display_unit()
     }
 }
 
-bool GreeACCNT::determine_health(){
-    bool health1 = (this->serialProcess_.data[protocol::REPORT_HEALTH1_BYTE] & protocol::REPORT_HEALTH1_MASK) != 0;
-    bool health2 = (this->serialProcess_.data[protocol::REPORT_HEALTH2_BYTE] & protocol::REPORT_HEALTH2_MASK) != 0;
-    return health1 || health2;
+bool GreeACCNT::determine_ionizer(){
+    bool ionizer1 = (this->serialProcess_.data[protocol::REPORT_IONIZER1_BYTE] & protocol::REPORT_IONIZER1_MASK) != 0;
+    bool ionizer2 = (this->serialProcess_.data[protocol::REPORT_IONIZER2_BYTE] & protocol::REPORT_IONIZER2_MASK) != 0;
+    return ionizer1 || ionizer2;
 }
 
 bool GreeACCNT::determine_beeper(){
@@ -1012,15 +1012,15 @@ void GreeACCNT::on_light_change(bool light)
     this->light_state_ = light;
 }
 
-void GreeACCNT::on_health_change(bool health)
+void GreeACCNT::on_ionizer_change(bool ionizer)
 {
     if (this->state_ != ACState::Ready)
         return;
 
-    ESP_LOGD(TAG, "Setting health");
+    ESP_LOGD(TAG, "Setting ionizer");
 
     this->update_ = ACUpdate::UpdateStart;
-    this->health_state_ = health;
+    this->ionizer_state_ = ionizer;
 }
 
 void GreeACCNT::on_beeper_change(bool beeper)

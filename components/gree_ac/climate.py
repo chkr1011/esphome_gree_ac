@@ -32,7 +32,7 @@ CONF_DISPLAY_SELECT             = "display_select"
 CONF_DISPLAY_UNIT_SELECT        = "display_unit_select"
 
 CONF_LIGHT_SWITCH               = "light_switch"
-CONF_HEALTH_SWITCH              = "health_switch"
+CONF_IONIZER_SWITCH             = "ionizer_switch"
 CONF_BEEPER_SWITCH              = "beeper_switch"
 CONF_SLEEP_SWITCH               = "sleep_switch"
 CONF_XFAN_SWITCH                = "xfan_switch"
@@ -94,7 +94,7 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(GreeACSwitch),
-        cv.GenerateID(CONF_HEALTH_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_IONIZER_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_XFAN_SWITCH): cv.declare_id(GreeACSwitch),
@@ -169,7 +169,7 @@ async def to_code(config):
 
     switches = [
         (CONF_LIGHT_SWITCH, "Light", "set_light_switch", "mdi:lightbulb-on-outline"),
-        (CONF_HEALTH_SWITCH, "Health", "set_health_switch", "mdi:pine-tree"),
+        (CONF_IONIZER_SWITCH, "Ionizer", "set_ionizer_switch", "mdi:pine-tree"),
         (CONF_BEEPER_SWITCH, "Beeper", "set_beeper_switch", "mdi:bell-ring"),
         (CONF_SLEEP_SWITCH, "Sleep", "set_sleep_switch", "mdi:power-sleep"),
         (CONF_XFAN_SWITCH, "X-Fan", "set_xfan_switch", "mdi:fan"),

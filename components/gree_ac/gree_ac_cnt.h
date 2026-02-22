@@ -110,10 +110,10 @@ namespace protocol {
     static const uint8_t TEMREC_MASK           = 0b01000000;
     static const uint8_t REPORT_DISP_F_MASK    = 0b10000000;
 
-    static const uint8_t REPORT_HEALTH1_BYTE     = 6;
-    static const uint8_t REPORT_HEALTH1_MASK     = 0b00000100;
-    static const uint8_t REPORT_HEALTH2_BYTE     = 0;
-    static const uint8_t REPORT_HEALTH2_MASK     = 0b00000100;
+    static const uint8_t REPORT_IONIZER1_BYTE    = 6;
+    static const uint8_t REPORT_IONIZER1_MASK    = 0b00000100;
+    static const uint8_t REPORT_IONIZER2_BYTE    = 0;
+    static const uint8_t REPORT_IONIZER2_MASK    = 0b00000100;
 
     static const uint8_t REPORT_SLEEP_BYTE       = 4;
     static const uint8_t REPORT_SLEEP_MASK       = 0b00001000;
@@ -162,7 +162,7 @@ class GreeACCNT : public GreeAC {
         void on_display_unit_change(const std::string &display_unit) override;
 
         void on_light_change(bool light) override;
-        void on_health_change(bool health) override;
+        void on_ionizer_change(bool ionizer) override;
         void on_beeper_change(bool beeper) override;
         void on_sleep_change(bool sleep) override;
         void on_xfan_change(bool xfan) override;
@@ -204,7 +204,7 @@ class GreeACCNT : public GreeAC {
         const char* determine_display_unit();
 
         bool determine_light();
-        bool determine_health();
+        bool determine_ionizer();
         bool determine_beeper();
         bool determine_sleep();
         bool determine_xfan();
