@@ -15,47 +15,51 @@ namespace gree_ac {
 
 namespace fan_modes{
     const char* const FAN_AUTO  = "Auto";
+    const char* const FAN_MIN   = "Minimum";
     const char* const FAN_LOW   = "Low";
-    const char* const FAN_MEDL  = "Medium-Low";
     const char* const FAN_MED   = "Medium";
-    const char* const FAN_MEDH  = "Medium-High";
     const char* const FAN_HIGH  = "High";
-    const char* const FAN_TURBO = "Turbo";
-    const char* const FAN_QUIET = "Quiet";
+    const char* const FAN_MAX   = "Maximum";
+}
+
+/* this must be same as QUIET_OPTIONS in climate.py */
+namespace quiet_options{
+    const char* const OFF   = "Off";
+    const char* const ON    = "On";
+    const char* const AUTO  = "Auto";
 }
 
 /* this must be same as HORIZONTAL_SWING_OPTIONS in climate.py */
 namespace horizontal_swing_options{
-    const char* const OFF    = "0 - OFF";
-    const char* const FULL   = "1 - Swing - Full";
-    const char* const CLEFT  = "2 - Constant - Left";
-    const char* const CMIDL  = "3 - Constant - Mid-Left";
-    const char* const CMID   = "4 - Constant - Middle";
-    const char* const CMIDR  = "5 - Constant - Mid-Right";
-    const char* const CRIGHT = "6 - Constant - Right";
+    const char* const OFF    = "Off";
+    const char* const FULL   = "Swing - Full";
+    const char* const CLEFT  = "Constant - Left";
+    const char* const CMIDL  = "Constant - Mid-Left";
+    const char* const CMID   = "Constant - Middle";
+    const char* const CMIDR  = "Constant - Mid-Right";
+    const char* const CRIGHT = "Constant - Right";
 }
 
 /* this must be same as VERTICAL_SWING_OPTIONS in climate.py */
 namespace vertical_swing_options{
-    const char* const OFF   = "00 - OFF";
-    const char* const FULL  = "01 - Swing - Full";
-    const char* const DOWN  = "02 - Swing - Down";
-    const char* const MIDD  = "03 - Swing - Mid-Down";
-    const char* const MID   = "04 - Swing - Middle";
-    const char* const MIDU  = "05 - Swing - Mid-Up";
-    const char* const UP    = "06 - Swing - Up";
-    const char* const CDOWN = "07 - Constant - Down";
-    const char* const CMIDD = "08 - Constant - Mid-Down";
-    const char* const CMID  = "09 - Constant - Middle";
-    const char* const CMIDU = "10 - Constant - Mid-Up";
-    const char* const CUP   = "11 - Constant - Up";
+    const char* const OFF   = "Off";
+    const char* const FULL  = "Swing - Full";
+    const char* const DOWN  = "Swing - Down";
+    const char* const MIDD  = "Swing - Mid-Down";
+    const char* const MID   = "Swing - Middle";
+    const char* const MIDU  = "Swing - Mid-Up";
+    const char* const UP    = "Swing - Up";
+    const char* const CDOWN = "Constant - Down";
+    const char* const CMIDD = "Constant - Mid-Down";
+    const char* const CMID  = "Constant - Middle";
+    const char* const CMIDU = "Constant - Mid-Up";
+    const char* const CUP   = "Constant - Up";
 }
 
 /* this must be same as DISPLAY_OPTIONS in climate.py */
 namespace display_options{
-    const char* const SET  = "2 - Set temperature";
-    const char* const ACT  = "3 - Actual temperature";
-    const char* const OUT  = "4 - Outside temperature";
+    const char* const SET  = "Set temperature";
+    const char* const ACT  = "Actual temperature";
 }
 
 /* this must be same as DISPLAY_UNIT_OPTIONS in climate.py */
@@ -92,6 +96,10 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void set_sleep_switch(switch_::Switch *sleep_switch);
         void set_xfan_switch(switch_::Switch *xfan_switch);
         void set_powersave_switch(switch_::Switch *powersave_switch);
+        void set_turbo_switch(switch_::Switch *turbo_switch);
+        void set_ifeel_switch(switch_::Switch *ifeel_switch);
+
+        void set_quiet_select(select::Select *quiet_select);
 
         void set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor);
 
@@ -112,6 +120,10 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         switch_::Switch *sleep_switch_           = nullptr; /* Switch for sleep */
         switch_::Switch *xfan_switch_            = nullptr; /* Switch for X-fan */
         switch_::Switch *powersave_switch_       = nullptr; /* Switch for powersave */
+        switch_::Switch *turbo_switch_           = nullptr; /* Switch for turbo */
+        switch_::Switch *ifeel_switch_           = nullptr; /* Switch for I-Feel */
+
+        select::Select *quiet_select_            = nullptr; /* Select for quiet mode */
 
         sensor::Sensor *current_temperature_sensor_ = nullptr; /* If user wants to replace reported temperature by an external sensor readout */
 
@@ -120,6 +132,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         std::string display_state_;
         std::string display_unit_state_;
+        std::string quiet_state_;
 
         bool light_state_;
         bool health_state_;
@@ -127,6 +140,8 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         bool sleep_state_;
         bool xfan_state_;
         bool powersave_state_;
+        bool turbo_state_;
+        bool ifeel_state_;
 
         SerialProcess_t serialProcess_;
 
@@ -156,6 +171,9 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void update_sleep(bool sleep);
         void update_xfan(bool xfan);
         void update_powersave(bool powersave);
+        void update_turbo(bool turbo);
+        void update_ifeel(bool ifeel);
+        void update_quiet(const std::string &quiet);
 
         virtual void on_horizontal_swing_change(const std::string &swing) = 0;
         virtual void on_vertical_swing_change(const std::string &swing) = 0;
@@ -169,6 +187,9 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         virtual void on_sleep_change(bool sleep) = 0;
         virtual void on_xfan_change(bool xfan) = 0;
         virtual void on_powersave_change(bool powersave) = 0;
+        virtual void on_turbo_change(bool turbo) = 0;
+        virtual void on_ifeel_change(bool ifeel) = 0;
+        virtual void on_quiet_change(const std::string &quiet) = 0;
 
         climate::ClimateAction determine_action();
 

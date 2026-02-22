@@ -29,10 +29,9 @@ climate::ClimateTraits GreeAC::traits()
     traits.set_supported_modes({climate::CLIMATE_MODE_OFF, climate::CLIMATE_MODE_AUTO, climate::CLIMATE_MODE_COOL,
                                 climate::CLIMATE_MODE_HEAT, climate::CLIMATE_MODE_FAN_ONLY, climate::CLIMATE_MODE_DRY});
 
-    traits.set_supported_custom_fan_modes({fan_modes::FAN_AUTO, fan_modes::FAN_LOW,
-                                           fan_modes::FAN_MEDL, fan_modes::FAN_MED,
-                                           fan_modes::FAN_MEDH, fan_modes::FAN_HIGH,
-                                           fan_modes::FAN_TURBO, fan_modes::FAN_QUIET});
+    traits.set_supported_custom_fan_modes({fan_modes::FAN_AUTO, fan_modes::FAN_MIN,
+                                           fan_modes::FAN_LOW, fan_modes::FAN_MED,
+                                           fan_modes::FAN_HIGH, fan_modes::FAN_MAX});
 
     return traits;
 }
@@ -250,6 +249,37 @@ void GreeAC::update_powersave(bool powersave)
     }
 }
 
+void GreeAC::update_turbo(bool turbo)
+{
+    this->turbo_state_ = turbo;
+
+    if (this->turbo_switch_ != nullptr)
+    {
+        this->turbo_switch_->publish_state(this->turbo_state_);
+    }
+}
+
+void GreeAC::update_ifeel(bool ifeel)
+{
+    this->ifeel_state_ = ifeel;
+
+    if (this->ifeel_switch_ != nullptr)
+    {
+        this->ifeel_switch_->publish_state(this->ifeel_state_);
+    }
+}
+
+void GreeAC::update_quiet(const std::string &quiet)
+{
+    this->quiet_state_ = quiet;
+
+    if (this->quiet_select_ != nullptr &&
+        this->quiet_select_->current_option() != this->quiet_state_)
+    {
+        this->quiet_select_->publish_state(this->quiet_state_);
+    }
+}
+
 climate::ClimateAction GreeAC::determine_action()
 {
     if (this->mode == climate::CLIMATE_MODE_OFF) {
@@ -384,6 +414,37 @@ void GreeAC::set_powersave_switch(switch_::Switch *powersave_switch)
         if (state == this->powersave_state_)
             return;
         this->on_powersave_change(state);
+    });
+}
+
+void GreeAC::set_turbo_switch(switch_::Switch *turbo_switch)
+{
+    this->turbo_switch_ = turbo_switch;
+    this->turbo_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->turbo_state_)
+            return;
+        this->on_turbo_change(state);
+    });
+}
+
+void GreeAC::set_ifeel_switch(switch_::Switch *ifeel_switch)
+{
+    this->ifeel_switch_ = ifeel_switch;
+    this->ifeel_switch_->add_on_state_callback([this](bool state) {
+        if (state == this->ifeel_state_)
+            return;
+        this->on_ifeel_change(state);
+    });
+}
+
+void GreeAC::set_quiet_select(select::Select *quiet_select)
+{
+    this->quiet_select_ = quiet_select;
+    this->quiet_select_->add_on_state_callback([this](size_t index) {
+        auto value = this->quiet_select_->at(index);
+        if (!value.has_value() || *value == this->quiet_state_)
+            return;
+        this->on_quiet_change(*value);
     });
 }
 
