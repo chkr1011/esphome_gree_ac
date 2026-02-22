@@ -60,7 +60,6 @@ namespace vertical_swing_options{
 namespace display_options{
     const char* const SET  = "Set temperature";
     const char* const ACT  = "Actual temperature";
-    const char* const OUT  = "Outside temperature";
 }
 
 /* this must be same as DISPLAY_UNIT_OPTIONS in climate.py */

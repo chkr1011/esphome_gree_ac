@@ -78,7 +78,6 @@ VERTICAL_SWING_OPTIONS = [
 DISPLAY_OPTIONS = [
     "Set temperature",
     "Actual temperature",
-    "Outside temperature",
 ]
 
 DISPLAY_UNIT_OPTIONS = [
