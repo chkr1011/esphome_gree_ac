@@ -15,11 +15,11 @@ namespace gree_ac {
 
 namespace fan_modes{
     const char* const FAN_AUTO  = "Auto";
+    const char* const FAN_MIN   = "Minimum";
     const char* const FAN_LOW   = "Low";
-    const char* const FAN_MEDL  = "Medium-Low";
     const char* const FAN_MED   = "Medium";
-    const char* const FAN_MEDH  = "Medium-High";
     const char* const FAN_HIGH  = "High";
+    const char* const FAN_MAX   = "Maximum";
 }
 
 /* this must be same as QUIET_OPTIONS in climate.py */
@@ -31,36 +31,36 @@ namespace quiet_options{
 
 /* this must be same as HORIZONTAL_SWING_OPTIONS in climate.py */
 namespace horizontal_swing_options{
-    const char* const OFF    = "0 - OFF";
-    const char* const FULL   = "1 - Swing - Full";
-    const char* const CLEFT  = "2 - Constant - Left";
-    const char* const CMIDL  = "3 - Constant - Mid-Left";
-    const char* const CMID   = "4 - Constant - Middle";
-    const char* const CMIDR  = "5 - Constant - Mid-Right";
-    const char* const CRIGHT = "6 - Constant - Right";
+    const char* const OFF    = "Off";
+    const char* const FULL   = "Swing - Full";
+    const char* const CLEFT  = "Constant - Left";
+    const char* const CMIDL  = "Constant - Mid-Left";
+    const char* const CMID   = "Constant - Middle";
+    const char* const CMIDR  = "Constant - Mid-Right";
+    const char* const CRIGHT = "Constant - Right";
 }
 
 /* this must be same as VERTICAL_SWING_OPTIONS in climate.py */
 namespace vertical_swing_options{
-    const char* const OFF   = "00 - OFF";
-    const char* const FULL  = "01 - Swing - Full";
-    const char* const DOWN  = "02 - Swing - Down";
-    const char* const MIDD  = "03 - Swing - Mid-Down";
-    const char* const MID   = "04 - Swing - Middle";
-    const char* const MIDU  = "05 - Swing - Mid-Up";
-    const char* const UP    = "06 - Swing - Up";
-    const char* const CDOWN = "07 - Constant - Down";
-    const char* const CMIDD = "08 - Constant - Mid-Down";
-    const char* const CMID  = "09 - Constant - Middle";
-    const char* const CMIDU = "10 - Constant - Mid-Up";
-    const char* const CUP   = "11 - Constant - Up";
+    const char* const OFF   = "Off";
+    const char* const FULL  = "Swing - Full";
+    const char* const DOWN  = "Swing - Down";
+    const char* const MIDD  = "Swing - Mid-Down";
+    const char* const MID   = "Swing - Middle";
+    const char* const MIDU  = "Swing - Mid-Up";
+    const char* const UP    = "Swing - Up";
+    const char* const CDOWN = "Constant - Down";
+    const char* const CMIDD = "Constant - Mid-Down";
+    const char* const CMID  = "Constant - Middle";
+    const char* const CMIDU = "Constant - Mid-Up";
+    const char* const CUP   = "Constant - Up";
 }
 
 /* this must be same as DISPLAY_OPTIONS in climate.py */
 namespace display_options{
-    const char* const SET  = "2 - Set temperature";
-    const char* const ACT  = "3 - Actual temperature";
-    const char* const OUT  = "4 - Outside temperature";
+    const char* const SET  = "Set temperature";
+    const char* const ACT  = "Actual temperature";
+    const char* const OUT  = "Outside temperature";
 }
 
 /* this must be same as DISPLAY_UNIT_OPTIONS in climate.py */
