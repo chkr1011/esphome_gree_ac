@@ -95,10 +95,14 @@ def parse_0x31(data):
             f"Light: {light}, Ionizer: {ionizer}, Beeper: {beeper}, X-Fan: {xfan}, "
             f"Sleep: {sleep}, Powersave: {powersave}, I-Feel: {ifeel}")
 
+def get_timestamp():
+    return time.strftime("%H:%M:%S", time.localtime()) + f".{int(time.time() * 1000) % 1000:03d}"
+
 def parse_packet(packet):
     if len(packet) < 5:
         return
 
+    ts = get_timestamp()
     cmd_id = packet[3]
     cmd_name = COMMAND_NAMES.get(cmd_id, f"UNKNOWN(0x{cmd_id:02X})")
 
@@ -112,29 +116,30 @@ def parse_packet(packet):
     elif cmd_id in [0x31, 0x33, 0x44]:
         direction = "RX"
 
-    print(f"[{direction}] {cmd_name} - {format_hex_pretty(packet)}")
+    print(f"[{ts}][{direction}] {cmd_name} - {format_hex_pretty(packet)}")
 
     if cmd_id == CMD_IN_UNIT_REPORT:
         payload = packet[4:-1]
         try:
-            print(f"      Details: {parse_0x31(payload)}")
+            print(f"[{ts}]      Details: {parse_0x31(payload)}")
         except Exception as e:
-            print(f"      Error parsing UNIT_REPORT: {e}")
+            print(f"[{ts}]      Error parsing UNIT_REPORT: {e}")
     elif cmd_id == CMD_OUT_PARAMS_SET:
         # 0x01 is almost same format as 0x31
         payload = packet[4:-1]
         try:
             # We can reuse parse_0x31 for most fields in PARAMS_SET as they share offsets
-            print(f"      Details: {parse_0x31(payload)}")
+            print(f"[{ts}]      Details: {parse_0x31(payload)}")
         except Exception as e:
-            print(f"      Error parsing PARAMS_SET: {e}")
+            print(f"[{ts}]      Error parsing PARAMS_SET: {e}")
     print("-" * 80)
 
 def main():
     port = "/dev/ttyUSB0"
     baud = 4800
 
-    print(f"Opening {port} at {baud} baud (EVEN parity)...")
+    ts = get_timestamp()
+    print(f"[{ts}] Opening {port} at {baud} baud (EVEN parity)...")
     try:
         ser = serial.Serial(
             port=port,
@@ -145,10 +150,11 @@ def main():
             timeout=0.1
         )
     except Exception as e:
-        print(f"Failed to open serial port: {e}")
+        print(f"[{ts}] Failed to open serial port: {e}")
         sys.exit(1)
 
-    print("Listening for Gree AC traffic...")
+    ts = get_timestamp()
+    print(f"[{ts}] Listening for Gree AC traffic...")
     buffer = bytearray()
 
     try:
@@ -180,8 +186,9 @@ def main():
                             if calc_checksum == packet[-1]:
                                 parse_packet(packet)
                             else:
-                                print(f"[ERR] Checksum mismatch! Calc: 0x{calc_checksum:02X}, Recv: 0x{packet[-1]:02X}")
-                                print(f"      Packet: {format_hex_pretty(packet)}")
+                                ts = get_timestamp()
+                                print(f"[{ts}][ERR] Checksum mismatch! Calc: 0x{calc_checksum:02X}, Recv: 0x{packet[-1]:02X}")
+                                print(f"[{ts}]      Packet: {format_hex_pretty(packet)}")
 
                             # Clear processed packet from buffer
                             buffer = buffer[length + 3:]

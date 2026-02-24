@@ -1,13 +1,6 @@
 #!/bin/bash
 set -e
 
-# Check for python3
-if ! command -v python3 &> /dev/null
-then
-    echo "python3 could not be found. Please install it."
-    exit 1
-fi
-
 # Create virtual environment if it doesn't exist
 if [ ! -d ".venv_sniffer" ]; then
     echo "Creating virtual environment in .venv_sniffer..."
