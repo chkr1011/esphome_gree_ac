@@ -59,16 +59,17 @@ void GreeACCNT::loop()
     }
 
     /* we will send a packet to the AC as a response to indicate changes */
-    send_packet();
-
-    if (this->state_ == ACState::Ready && !this->mac_sent_)
-    {
-        send_mac_report();
-    }
-
     if (millis() - this->last_sync_time_sent_ >= 10000)
     {
         send_sync_time();
+    }
+    else if (this->state_ == ACState::Ready && !this->mac_sent_)
+    {
+        send_mac_report();
+    }
+    else
+    {
+        send_packet();
     }
 
     /* if there are no packets for some time - mark module as not ready */
