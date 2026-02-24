@@ -1,6 +1,7 @@
 // based on: https://github.com/DomiStyle/esphome-panasonic-ac
 #include "gree_ac_cnt.h"
 #include "esphome/core/log.h"
+#include "esphome/core/util.h"
 #include <cstring>
 
 namespace esphome {
@@ -17,6 +18,8 @@ void GreeACCNT::setup()
     GreeAC::setup();
     ESP_LOGD(TAG, "Using serial protocol for Gree AC");
     memset(this->lastpacket, 0, sizeof(this->lastpacket));
+    this->mac_sent_ = false;
+    this->last_sync_time_sent_ = millis() - 10000;
 }
 
 void GreeACCNT::loop()
@@ -43,6 +46,9 @@ void GreeACCNT::loop()
                 this->state_ = ACState::Ready;
                 Component::status_clear_error();
                 this->last_packet_sent_ = millis();
+                if (!this->mac_sent_) {
+                    this->send_mac_report();
+                }
             }
 
             if (this->update_ == ACUpdate::NoUpdate)
@@ -57,6 +63,11 @@ void GreeACCNT::loop()
 
     /* we will send a packet to the AC as a response to indicate changes */
     send_packet();
+
+    if (millis() - this->last_sync_time_sent_ >= 10000)
+    {
+        send_sync_time();
+    }
 
     /* if there are no packets for some time - mark module as not ready */
     if (millis() - this->last_packet_received_ >= protocol::TIME_TIMEOUT_INACTIVE_MS)
@@ -508,6 +519,80 @@ void GreeACCNT::send_packet()
             this->update_ = ACUpdate::NoUpdate;
             break;
     }
+}
+
+void GreeACCNT::send_mac_report()
+{
+    uint8_t full_packet[17];
+    uint8_t mac[6];
+    get_mac_address_raw(mac);
+
+    full_packet[0] = protocol::SYNC;
+    full_packet[1] = protocol::SYNC;
+    full_packet[2] = 0x0D; // Length
+    full_packet[3] = protocol::CMD_OUT_MAC_REPORT;
+    full_packet[4] = 0x07;
+    full_packet[5] = 0x00;
+    full_packet[6] = 0x00;
+    full_packet[7] = 0x00;
+    memcpy(&full_packet[8], mac, 6);
+    full_packet[14] = 0x00;
+
+    uint8_t checksum = 0;
+    for (uint8_t i = 2; i < 15; i++)
+    {
+        checksum += full_packet[i];
+    }
+    full_packet[15] = checksum;
+
+    ESP_LOGD(TAG, "Sending MAC report: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    write_array(full_packet, 16); // Sync(2) + Len(1) + Data(13) = 16 bytes total including checksum?
+    // Wait. 7E 7E 0D 04 07 00 00 00 MAC(6) 00 CRC
+    // 0: 7E
+    // 1: 7E
+    // 2: 0D (LEN)
+    // 3: 04 (CMD)
+    // 4: 07
+    // 5: 00
+    // 6: 00
+    // 7: 00
+    // 8: MAC0
+    // 9: MAC1
+    // 10: MAC2
+    // 11: MAC3
+    // 12: MAC4
+    // 13: MAC5
+    // 14: 00
+    // 15: CRC
+    // Total 16 bytes.
+
+    log_packet(full_packet, 16, true);
+    this->mac_sent_ = true;
+}
+
+void GreeACCNT::send_sync_time()
+{
+    uint8_t full_packet[17];
+    full_packet[0] = protocol::SYNC;
+    full_packet[1] = protocol::SYNC;
+    full_packet[2] = 0x0E; // Length
+    full_packet[3] = protocol::CMD_OUT_SYNC_TIME;
+    full_packet[4] = 0x04;
+    memset(&full_packet[5], 0, 10);
+    full_packet[15] = 0x7E;
+
+    uint8_t checksum = 0;
+    for (uint8_t i = 2; i < 16; i++)
+    {
+        checksum += full_packet[i];
+    }
+    full_packet[16] = checksum;
+
+    ESP_LOGD(TAG, "Sending sync time packet");
+    write_array(full_packet, 17);
+    log_packet(full_packet, 17, true);
+    this->last_sync_time_sent_ = millis();
+    this->last_packet_sent_ = millis();
 }
 
 /*
