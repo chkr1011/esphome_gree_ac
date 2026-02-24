@@ -143,8 +143,8 @@ namespace protocol {
 
     /* time constraints */
     static const unsigned long TIME_REFRESH_PERIOD_MS   =  300;
-    static const unsigned long TIME_TIMEOUT_INACTIVE_MS = 1000;
-    static const unsigned long TIME_WAIT_RESPONSE_TIMEOUT_MS = 1000;
+    static const unsigned long TIME_TIMEOUT_INACTIVE_MS = 10000;
+    static const unsigned long TIME_WAIT_RESPONSE_TIMEOUT_MS = 10000;
 }
 
 class GreeACCNT : public GreeAC {

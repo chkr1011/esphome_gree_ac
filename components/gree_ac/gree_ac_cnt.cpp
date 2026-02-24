@@ -45,10 +45,6 @@ void GreeACCNT::loop()
             {
                 this->state_ = ACState::Ready;
                 Component::status_clear_error();
-                this->last_packet_sent_ = millis();
-                if (!this->mac_sent_) {
-                    this->send_mac_report();
-                }
             }
 
             if (this->update_ == ACUpdate::NoUpdate)
@@ -57,16 +53,23 @@ void GreeACCNT::loop()
             }
         }
 
-        /* do not forget to order for restart of the receive state machine */
-        this->serialProcess_.state = STATE_RESTART;
+        /* restart for next packet */
+        this->serialProcess_.data.clear();
+        this->serialProcess_.state = STATE_WAIT_SYNC;
     }
 
     /* we will send a packet to the AC as a response to indicate changes */
-    send_packet();
-
     if (millis() - this->last_sync_time_sent_ >= 10000)
     {
         send_sync_time();
+    }
+    else if (this->state_ == ACState::Ready && !this->mac_sent_)
+    {
+        send_mac_report();
+    }
+    else
+    {
+        send_packet();
     }
 
     /* if there are no packets for some time - mark module as not ready */
@@ -197,7 +200,7 @@ void GreeACCNT::send_packet()
     {
         default:
         case ACUpdate::NoUpdate:
-            payload[protocol::SET_NOCHANGE_BYTE] |= protocol::SET_NOCHANGE_MASK;
+            // payload[protocol::SET_NOCHANGE_BYTE] |= protocol::SET_NOCHANGE_MASK; // Bit 0x08 at byte 11 indicates no change
             break;
         case ACUpdate::UpdateStart:
             payload[protocol::SET_AF_BYTE] = protocol::SET_AF_VAL;
@@ -510,7 +513,7 @@ void GreeACCNT::send_packet()
         case ACUpdate::NoUpdate:
             break;
         case ACUpdate::UpdateStart:
-            this->update_ = ACUpdate::UpdateClear;
+            this->update_ = ACUpdate::NoUpdate; // Transition directly to NoUpdate to send AF only once
             break;
         case ACUpdate::UpdateClear:
             this->update_ = ACUpdate::NoUpdate;
@@ -523,6 +526,11 @@ void GreeACCNT::send_packet()
 
 void GreeACCNT::send_mac_report()
 {
+    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
+    {
+        return;
+    }
+
     uint8_t full_packet[17];
     uint8_t mac[6];
     get_mac_address_raw(mac);
@@ -546,6 +554,7 @@ void GreeACCNT::send_mac_report()
     full_packet[15] = checksum;
 
     ESP_LOGD(TAG, "Sending MAC report: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    this->last_packet_sent_ = millis();
     write_array(full_packet, 16); // Sync(2) + Len(1) + Data(13) = 16 bytes total including checksum?
     // Wait. 7E 7E 0D 04 07 00 00 00 MAC(6) 00 CRC
     // 0: 7E
@@ -572,6 +581,11 @@ void GreeACCNT::send_mac_report()
 
 void GreeACCNT::send_sync_time()
 {
+    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
+    {
+        return;
+    }
+
     uint8_t full_packet[17];
     full_packet[0] = protocol::SYNC;
     full_packet[1] = protocol::SYNC;
