@@ -2,6 +2,7 @@
 import serial
 import time
 import sys
+import argparse
 
 # Protocol constants from gree_ac_cnt.h
 SYNC = 0x7E
@@ -135,7 +136,11 @@ def parse_packet(packet):
     print("-" * 80)
 
 def main():
-    port = "/dev/ttyUSB0"
+    parser = argparse.ArgumentParser(description="Gree AC Serial Sniffer")
+    parser.add_argument("--port", default="/dev/ttyUSB0", help="Serial port to use (default: /dev/ttyUSB0)")
+    args = parser.parse_args()
+
+    port = args.port
     baud = 4800
 
     ts = get_timestamp()

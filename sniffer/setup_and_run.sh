@@ -8,7 +8,7 @@ if [ ! -d ".venv_sniffer" ]; then
 fi
 
 # Activate virtual environment
-source .venv_sniffer/bin/activate
+. .venv_sniffer/bin/activate
 
 # Install dependencies
 echo "Ensuring dependencies are installed..."
@@ -17,4 +17,4 @@ pip install pyserial
 # Run the script
 echo "Starting the sniffer..."
 # Use exec to replace the shell process with python
-exec python3 analyze_dongle.py
+exec python3 analyze_dongle.py "$@"
