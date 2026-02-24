@@ -200,7 +200,7 @@ void GreeACCNT::send_packet()
     {
         default:
         case ACUpdate::NoUpdate:
-            payload[protocol::SET_NOCHANGE_BYTE] |= protocol::SET_NOCHANGE_MASK;
+            // payload[protocol::SET_NOCHANGE_BYTE] |= protocol::SET_NOCHANGE_MASK; // Bit 0x08 at byte 11 indicates no change
             break;
         case ACUpdate::UpdateStart:
             payload[protocol::SET_AF_BYTE] = protocol::SET_AF_VAL;
@@ -513,7 +513,7 @@ void GreeACCNT::send_packet()
         case ACUpdate::NoUpdate:
             break;
         case ACUpdate::UpdateStart:
-            this->update_ = ACUpdate::UpdateClear;
+            this->update_ = ACUpdate::NoUpdate; // Transition directly to NoUpdate to send AF only once
             break;
         case ACUpdate::UpdateClear:
             this->update_ = ACUpdate::NoUpdate;
