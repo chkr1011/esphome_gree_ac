@@ -53,8 +53,9 @@ void GreeACCNT::loop()
             }
         }
 
-        /* do not forget to order for restart of the receive state machine */
-        this->serialProcess_.state = STATE_RESTART;
+        /* restart for next packet */
+        this->serialProcess_.data.clear();
+        this->serialProcess_.state = STATE_WAIT_SYNC;
     }
 
     /* we will send a packet to the AC as a response to indicate changes */
@@ -161,14 +162,17 @@ void GreeACCNT::control(const climate::ClimateCall &call)
     }
 }
 
-bool GreeACCNT::can_send()
+/*
+ * Send a raw packet, as is
+ */
+void GreeACCNT::send_packet()
 {
     if (this->wait_response_)
     {
         if (millis() - this->last_packet_sent_ < protocol::TIME_WAIT_RESPONSE_TIMEOUT_MS)
         {
             /* waiting for report to come */
-            return false;
+            return;
         }
         else
         {
@@ -180,33 +184,6 @@ bool GreeACCNT::can_send()
     if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
     {
         /* do net send packet too often */
-        return false;
-    }
-
-    // Busy check: check if we are currently receiving a packet
-    if (this->serialProcess_.state != STATE_WAIT_SYNC &&
-        this->serialProcess_.state != STATE_COMPLETE &&
-        this->serialProcess_.state != STATE_RESTART)
-    {
-        return false;
-    }
-
-    // Also check if we have started receiving sync bytes even in STATE_WAIT_SYNC
-    if (this->serialProcess_.state == STATE_WAIT_SYNC && !this->serialProcess_.data.empty())
-    {
-        return false;
-    }
-
-    return true;
-}
-
-/*
- * Send a raw packet, as is
- */
-void GreeACCNT::send_packet()
-{
-    if (!can_send())
-    {
         return;
     }
 
@@ -548,7 +525,7 @@ void GreeACCNT::send_packet()
 
 void GreeACCNT::send_mac_report()
 {
-    if (!can_send())
+    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
     {
         return;
     }
@@ -603,7 +580,7 @@ void GreeACCNT::send_mac_report()
 
 void GreeACCNT::send_sync_time()
 {
-    if (!can_send())
+    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
     {
         return;
     }

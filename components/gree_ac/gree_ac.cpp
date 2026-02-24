@@ -59,18 +59,7 @@ void GreeAC::loop()
 }
 
 void GreeAC::read_data() {
-  // Check for timeout of partially received packet
-  if (this->serialProcess_.state != STATE_WAIT_SYNC &&
-      this->serialProcess_.state != STATE_COMPLETE &&
-      this->serialProcess_.state != STATE_RESTART &&
-      millis() - this->serialProcess_.last_byte_time > READ_TIMEOUT) {
-    ESP_LOGV(TAG, "Packet reception timeout (state=%d, bytes=%zu), resetting state machine",
-             (int)this->serialProcess_.state, this->serialProcess_.data.size());
-    this->serialProcess_.state = STATE_RESTART;
-  }
-
   while (available()) {
-    /* If we had a packet or a packet had not been decoded yet - do not receive more data */
     if (this->serialProcess_.state == STATE_COMPLETE) {
       break;
     }
@@ -81,46 +70,33 @@ void GreeAC::read_data() {
     }
     this->serialProcess_.last_byte_time = millis();
 
-    if (this->serialProcess_.state == STATE_RESTART) {
-      this->serialProcess_.data.clear();
-      this->serialProcess_.state = STATE_WAIT_SYNC;
+    this->serialProcess_.data.push_back(c);
+    size_t s = this->serialProcess_.data.size();
+
+    // Check for sync marker within packet (resync)
+    if (s >= 2 && this->serialProcess_.data[s-2] == 0x7E && this->serialProcess_.data[s-1] == 0x7E) {
+        if (s > 2) {
+            this->serialProcess_.data.assign({0x7E, 0x7E});
+            s = 2;
+        }
+    } else if (s == 1 && this->serialProcess_.data[0] != 0x7E) {
+        this->serialProcess_.data.clear();
+        continue;
+    } else if (s == 2 && this->serialProcess_.data[0] == 0x7E && this->serialProcess_.data[1] != 0x7E) {
+        this->serialProcess_.data.clear();
+        continue;
     }
 
-    switch (this->serialProcess_.state) {
-      case STATE_WAIT_SYNC:
-        if (c == 0x7E) {
-          if (this->serialProcess_.data.size() < 2) {
-            this->serialProcess_.data.push_back(c);
-          }
-        } else {
-          if (this->serialProcess_.data.size() == 2) {
-            // Found non-0x7E after at least two 0x7E's -> it's the length
-            this->serialProcess_.data.push_back(c);
-            this->serialProcess_.frame_size = c;
-            this->serialProcess_.state = STATE_RECIEVE;
-          } else {
-            // Noise or partial sync, reset
-            this->serialProcess_.data.clear();
-          }
-        }
-        break;
-
-      case STATE_RECIEVE:
-        this->serialProcess_.data.push_back(c);
-        if (this->serialProcess_.data.size() >= (size_t)(this->serialProcess_.frame_size + 3)) {
-          /* WE HAVE A FULL FRAME FROM AC */
-          this->serialProcess_.state = STATE_COMPLETE;
-        }
-        break;
-
-      default:
-        break;
+    if (s == 3) {
+      this->serialProcess_.frame_size = c;
     }
 
-    if (this->serialProcess_.data.size() >= DATA_MAX) {
-      ESP_LOGW(TAG, "Buffer overflow, resetting state machine");
+    if (s >= 3 && s == (size_t)(this->serialProcess_.frame_size + 3)) {
+      this->serialProcess_.state = STATE_COMPLETE;
+    }
+
+    if (s >= DATA_MAX) {
       this->serialProcess_.data.clear();
-      this->serialProcess_.state = STATE_WAIT_SYNC;
     }
   }
 }
