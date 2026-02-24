@@ -159,49 +159,74 @@ def main():
         sys.exit(1)
 
     ts = get_timestamp()
-    print(f"[{ts}] Listening for Gree AC traffic...")
+    print(f"[{ts}] Listening for Gree AC traffic (waiting for next sync to process)...")
     buffer = bytearray()
 
     try:
         while True:
             char = ser.read(1)
-            if not char:
+            if char:
+                buffer.append(char[0])
+            else:
                 continue
 
-            buffer.append(char[0])
+            # Find all sync markers
+            sync_indices = []
+            for i in range(len(buffer) - 1):
+                if buffer[i] == SYNC and buffer[i+1] == SYNC:
+                    # Avoid overlapping pairs (e.g., 7E 7E 7E)
+                    if not sync_indices or i >= sync_indices[-1] + 2:
+                        sync_indices.append(i)
 
-            # Look for sync
-            if len(buffer) >= 2:
-                if buffer[0] == SYNC and buffer[1] == SYNC:
-                    # We have sync, wait for length
-                    if len(buffer) >= 3:
-                        length = buffer[2]
-                        # Total packet size is length + 3 (sync1, sync2, length)
-                        # Wait, length in protocol includes CMD and DATA, but not sync and length byte?
-                        # In ESPHome: this->serialProcess_.data.size() >= (size_t)(this->serialProcess_.frame_size + 3)
-                        # So total size is frame_size + 3.
-                        if len(buffer) >= length + 3:
-                            packet = buffer[:length + 3]
+            if len(sync_indices) >= 2:
+                # We have at least two sync markers.
+                # The data from the first sync to the second sync is our potential packet.
+                start = sync_indices[0]
+                end = sync_indices[1]
+                packet = buffer[start:end]
 
-                            # Verify checksum
-                            calc_checksum = 0
-                            for i in range(2, len(packet) - 1):
-                                calc_checksum = (calc_checksum + packet[i]) & 0xFF
+                # Identify where the LEN byte starts (skipping extra leading 7Es)
+                len_idx = 2
+                while len_idx < len(packet) and packet[len_idx] == SYNC:
+                    len_idx += 1
 
-                            if calc_checksum == packet[-1]:
-                                parse_packet(packet)
-                            else:
-                                ts = get_timestamp()
-                                print(f"[{ts}][ERR] Checksum mismatch! Calc: 0x{calc_checksum:02X}, Recv: 0x{packet[-1]:02X}")
-                                print(f"[{ts}]      Packet: {format_hex_pretty(packet)}")
+                # Check if we have enough bytes for a header (LEN, CMD)
+                if len_idx < len(packet) - 1:
+                    frame_len = packet[len_idx]
+                    # The CRC should be at index len_idx + frame_len
+                    crc_idx = len_idx + frame_len
 
-                            # Clear processed packet from buffer
-                            buffer = buffer[length + 3:]
-                else:
-                    # Sync not found at start, shift buffer
-                    buffer.pop(0)
+                    if crc_idx < len(packet):
+                        recv_crc = packet[crc_idx]
+                        calc_crc = 0
+                        for i in range(len_idx, crc_idx):
+                            calc_crc = (calc_crc + packet[i]) & 0xFF
 
-            if len(buffer) > 256: # Safety
+                        if calc_crc == recv_crc:
+                            # Construct a "clean" packet starting with exactly 7E 7E
+                            # and ending exactly at CRC
+                            clean_packet = bytearray([SYNC, SYNC]) + packet[len_idx:crc_idx + 1]
+                            parse_packet(clean_packet)
+                        else:
+                            ts = get_timestamp()
+                            print(f"[{ts}][ERR] Checksum mismatch! Calc: 0x{calc_crc:02X}, Recv: 0x{recv_crc:02X}")
+                            print(f"[{ts}]      Packet: {format_hex_pretty(packet)}")
+                    else:
+                        # We have a next sync, but the packet described by LEN
+                        # is longer than what we have between syncs.
+                        ts = get_timestamp()
+                        print(f"[{ts}][ERR] Incomplete packet or invalid length!")
+                        print(f"[{ts}]      Packet: {format_hex_pretty(packet)}")
+
+                # Remove processed data up to the start of the next packet
+                buffer = buffer[end:]
+
+            elif len(sync_indices) == 1 and sync_indices[0] > 0:
+                # Garbage before the first sync, discard it
+                buffer = buffer[sync_indices[0]:]
+
+            if len(buffer) > 1024: # Safety limit
+                # If no sync found in 1KB, something is wrong
                 buffer.clear()
 
     except KeyboardInterrupt:
