@@ -19,6 +19,7 @@ void GreeACCNT::setup()
     ESP_LOGD(TAG, "Using serial protocol for Gree AC");
     memset(this->lastpacket, 0, sizeof(this->lastpacket));
     this->mac_sent_ = false;
+    this->last_sync_time_sent_ = millis() - 10000;
 }
 
 void GreeACCNT::loop()
@@ -62,6 +63,11 @@ void GreeACCNT::loop()
 
     /* we will send a packet to the AC as a response to indicate changes */
     send_packet();
+
+    if (millis() - this->last_sync_time_sent_ >= 10000)
+    {
+        send_sync_time();
+    }
 
     /* if there are no packets for some time - mark module as not ready */
     if (millis() - this->last_packet_received_ >= protocol::TIME_TIMEOUT_INACTIVE_MS)
@@ -562,6 +568,31 @@ void GreeACCNT::send_mac_report()
 
     log_packet(full_packet, 16, true);
     this->mac_sent_ = true;
+}
+
+void GreeACCNT::send_sync_time()
+{
+    uint8_t full_packet[17];
+    full_packet[0] = protocol::SYNC;
+    full_packet[1] = protocol::SYNC;
+    full_packet[2] = 0x0E; // Length
+    full_packet[3] = protocol::CMD_OUT_SYNC_TIME;
+    full_packet[4] = 0x04;
+    memset(&full_packet[5], 0, 10);
+    full_packet[15] = 0x7E;
+
+    uint8_t checksum = 0;
+    for (uint8_t i = 2; i < 16; i++)
+    {
+        checksum += full_packet[i];
+    }
+    full_packet[16] = checksum;
+
+    ESP_LOGD(TAG, "Sending sync time packet");
+    write_array(full_packet, 17);
+    log_packet(full_packet, 17, true);
+    this->last_sync_time_sent_ = millis();
+    this->last_packet_sent_ = millis();
 }
 
 /*
