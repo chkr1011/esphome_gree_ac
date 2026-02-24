@@ -173,6 +173,7 @@ class GreeACCNT : public GreeAC {
     protected:
         ACState state_ = ACState::Initializing; /* Stores if the AC is responsive or not */
         ACUpdate update_ = ACUpdate::NoUpdate;  /* Stores if we need tu send update to AC or no */
+        bool mac_sent_ = false;
 
         climate::ClimateMode mode_internal_;
         bool power_internal_;
@@ -183,6 +184,7 @@ class GreeACCNT : public GreeAC {
         bool processUnitReport();
 
         void send_packet();
+        void send_mac_report();
 
         bool reqmodechange = false;
         unsigned char lastpacket[60];
