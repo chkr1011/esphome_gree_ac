@@ -45,10 +45,6 @@ void GreeACCNT::loop()
             {
                 this->state_ = ACState::Ready;
                 Component::status_clear_error();
-                this->last_packet_sent_ = millis();
-                if (!this->mac_sent_) {
-                    this->send_mac_report();
-                }
             }
 
             if (this->update_ == ACUpdate::NoUpdate)
@@ -63,6 +59,11 @@ void GreeACCNT::loop()
 
     /* we will send a packet to the AC as a response to indicate changes */
     send_packet();
+
+    if (this->state_ == ACState::Ready && !this->mac_sent_)
+    {
+        send_mac_report();
+    }
 
     if (millis() - this->last_sync_time_sent_ >= 10000)
     {
@@ -160,17 +161,14 @@ void GreeACCNT::control(const climate::ClimateCall &call)
     }
 }
 
-/*
- * Send a raw packet, as is
- */
-void GreeACCNT::send_packet()
+bool GreeACCNT::can_send()
 {
     if (this->wait_response_)
     {
         if (millis() - this->last_packet_sent_ < protocol::TIME_WAIT_RESPONSE_TIMEOUT_MS)
         {
             /* waiting for report to come */
-            return;
+            return false;
         }
         else
         {
@@ -182,6 +180,33 @@ void GreeACCNT::send_packet()
     if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
     {
         /* do net send packet too often */
+        return false;
+    }
+
+    // Busy check: check if we are currently receiving a packet
+    if (this->serialProcess_.state != STATE_WAIT_SYNC &&
+        this->serialProcess_.state != STATE_COMPLETE &&
+        this->serialProcess_.state != STATE_RESTART)
+    {
+        return false;
+    }
+
+    // Also check if we have started receiving sync bytes even in STATE_WAIT_SYNC
+    if (this->serialProcess_.state == STATE_WAIT_SYNC && !this->serialProcess_.data.empty())
+    {
+        return false;
+    }
+
+    return true;
+}
+
+/*
+ * Send a raw packet, as is
+ */
+void GreeACCNT::send_packet()
+{
+    if (!can_send())
+    {
         return;
     }
 
@@ -523,6 +548,11 @@ void GreeACCNT::send_packet()
 
 void GreeACCNT::send_mac_report()
 {
+    if (!can_send())
+    {
+        return;
+    }
+
     uint8_t full_packet[17];
     uint8_t mac[6];
     get_mac_address_raw(mac);
@@ -546,6 +576,7 @@ void GreeACCNT::send_mac_report()
     full_packet[15] = checksum;
 
     ESP_LOGD(TAG, "Sending MAC report: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    this->last_packet_sent_ = millis();
     write_array(full_packet, 16); // Sync(2) + Len(1) + Data(13) = 16 bytes total including checksum?
     // Wait. 7E 7E 0D 04 07 00 00 00 MAC(6) 00 CRC
     // 0: 7E
@@ -572,6 +603,11 @@ void GreeACCNT::send_mac_report()
 
 void GreeACCNT::send_sync_time()
 {
+    if (!can_send())
+    {
+        return;
+    }
+
     uint8_t full_packet[17];
     full_packet[0] = protocol::SYNC;
     full_packet[1] = protocol::SYNC;

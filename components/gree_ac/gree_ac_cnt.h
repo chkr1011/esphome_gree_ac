@@ -143,8 +143,8 @@ namespace protocol {
 
     /* time constraints */
     static const unsigned long TIME_REFRESH_PERIOD_MS   =  300;
-    static const unsigned long TIME_TIMEOUT_INACTIVE_MS = 1000;
-    static const unsigned long TIME_WAIT_RESPONSE_TIMEOUT_MS = 1000;
+    static const unsigned long TIME_TIMEOUT_INACTIVE_MS = 60000;
+    static const unsigned long TIME_WAIT_RESPONSE_TIMEOUT_MS = 60000;
 }
 
 class GreeACCNT : public GreeAC {
@@ -184,6 +184,7 @@ class GreeACCNT : public GreeAC {
 
         bool processUnitReport();
 
+        bool can_send();
         void send_packet();
         void send_mac_report();
         void send_sync_time();
