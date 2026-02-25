@@ -26,7 +26,7 @@ namespace protocol {
     static const uint8_t CMD_OUT_PARAMS_SET  = 0x01;
     static const uint8_t CMD_OUT_SYNC_TIME   = 0x03;
     static const uint8_t CMD_OUT_MAC_REPORT  = 0x04; /* 7e 7e 0d 04 04 00 00 00 AA BB CC DD EE FF 00 -> AA BB CC DD EE FF = MAC address */
-    static const uint8_t CMD_OUT_UNKNOWN_1   = 0x02; /* 7e 7e 10 02 00 00 00 00 00 00 01 00 28 1e 19 23 23 00 b8 */
+    static const uint8_t CMD_OUT_UNKNOWN_1   = 0x02; /* 7e 7e 10 02 00 00 00 00 00 00 03 00 28 1e 19 23 23 00 ba */
     static const uint8_t CMD_IN_UNKNOWN_1    = 0x44; /* 7e 7e 1a 44 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 */
     static const uint8_t CMD_IN_UNKNOWN_2    = 0x33; /* 7e 7e 2f 33 00 00 40 00 09 20 19 0a 00 10 00 14 17 5b 08 08 00 00 00 00 00 00 00 00 01 00 00 0d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 */
 
@@ -142,7 +142,8 @@ namespace protocol {
     static const uint8_t SET_CONST_BIT_MASK    = 0b00000010;
 
     /* time constraints */
-    static const unsigned long TIME_REFRESH_PERIOD_MS   =  300;
+    static const unsigned long TIME_REFRESH_PERIOD_MS   =  330;
+    static const unsigned long TIME_MAC_CYCLE_PERIOD_MS = 60000;
     static const unsigned long TIME_TIMEOUT_INACTIVE_MS = 10000;
     static const unsigned long TIME_WAIT_RESPONSE_TIMEOUT_MS = 10000;
 }
@@ -173,8 +174,12 @@ class GreeACCNT : public GreeAC {
     protected:
         ACState state_ = ACState::Initializing; /* Stores if the AC is responsive or not */
         ACUpdate update_ = ACUpdate::NoUpdate;  /* Stores if we need tu send update to AC or no */
-        bool mac_sent_ = false;
+
+        bool startup_special_sent_ = false;
+        uint8_t mac_packets_pending_ = 0;
+        uint32_t last_mac_sequence_millis_ = 0;
         uint32_t last_sync_time_sent_ = 0;
+        uint32_t last_packet_duration_ms_ = 0;
 
         climate::ClimateMode mode_internal_;
         bool power_internal_;
@@ -184,9 +189,12 @@ class GreeACCNT : public GreeAC {
 
         bool processUnitReport();
 
-        void send_packet();
-        void send_mac_report();
-        void send_sync_time();
+        void send_params_set_packet();
+        void send_mac_report_packet();
+        void send_sync_time_packet();
+        void send_special_startup_packet();
+
+        void transmit_packet(const uint8_t *packet, size_t length);
 
         bool reqmodechange = false;
         unsigned char lastpacket[60];
