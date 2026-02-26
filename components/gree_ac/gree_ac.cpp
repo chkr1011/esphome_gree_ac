@@ -41,8 +41,13 @@ void GreeAC::setup()
   // Initialize times
     this->init_time_ = millis();
     this->last_packet_sent_ = millis();
-    this->light_mode_ = light_options::OFF;
+    this->light_mode_ = light_options::AUTO;
     this->light_state_ = false;
+
+    if (this->light_select_ != nullptr) {
+        this->light_select_->publish_state(this->light_mode_);
+    }
+
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
     this->serialProcess_.data.reserve(DATA_MAX);

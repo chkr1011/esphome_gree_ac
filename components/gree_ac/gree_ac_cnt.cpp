@@ -789,17 +789,18 @@ bool GreeACCNT::processUnitReport()
     }
 
     bool light_reported = determine_light();
-    if (this->light_state_ != light_reported) {
+    if (this->light_state_ != light_reported || (this->light_select_ != nullptr && !this->light_select_->current_option().has_value())) {
         if (this->light_mode_ == light_options::AUTO)
         {
             if (!modeChanged) {
                 // Remote override: AC power state did not change, but light status changed.
                 // We accept the new status as our desired state.
                 this->light_state_ = light_reported;
-                this->update_light(this->light_state_);
-                hasChanged = true;
             }
             // else: Mode changed, we keep our calculated light_state_ and UpdateStart set above.
+
+            this->update_light(this->light_state_);
+            hasChanged = true;
         }
         else if (this->light_mode_ == light_options::OFF)
         {
