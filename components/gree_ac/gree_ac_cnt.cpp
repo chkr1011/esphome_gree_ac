@@ -20,7 +20,7 @@ void GreeACCNT::setup()
     memset(this->lastpacket, 0, sizeof(this->lastpacket));
 
     this->startup_special_sent_ = false;
-    this->mac_packets_pending_ = 6;
+    this->mac_packets_pending_ = 3;
     this->last_mac_sequence_millis_ = 0;
     this->last_sync_time_sent_ = millis() - 10000;
     this->last_packet_duration_ms_ = 0;

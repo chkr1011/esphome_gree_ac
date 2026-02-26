@@ -21,16 +21,11 @@ def log_packet(packet, direction):
     print(f"[{ts}] [{direction}] [{hex_data}] [{length}]")
 
 def handle_rx_packet(ser, packet):
-    """
-    Placeholder for future response logic.
-    TX is basically the answer from the script to certain packets.
-    """
-    # Example:
-    # if packet[3] == 0x31: # UNIT_REPORT (assuming index 3 is CMD for 2-sync packet)
-    #     response = bytearray([0x7E, 0x7E, ...])
-    #     ser.write(response)
-    #     log_packet(response, "TX")
-    pass
+    # Reponse to MAC ADDRESS_REQUEST (0x04)
+    if (packet[3] == 0x04):
+        response = bytearray([0x7E, 0x7E, 0x1A, 0x44, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x61])
+        ser.write(response)
+        log_packet(response, "TX")
 
 def main():
     parser = argparse.ArgumentParser(description="Gree AC Serial Sniffer")
