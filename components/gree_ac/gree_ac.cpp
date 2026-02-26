@@ -41,6 +41,13 @@ void GreeAC::setup()
   // Initialize times
     this->init_time_ = millis();
     this->last_packet_sent_ = millis();
+    this->light_mode_ = light_options::AUTO;
+    this->light_state_ = false;
+
+    if (this->light_select_ != nullptr) {
+        this->light_select_->publish_state(this->light_mode_);
+    }
+
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
     this->serialProcess_.data.reserve(DATA_MAX);
@@ -169,9 +176,10 @@ void GreeAC::update_light(bool light)
 {
     this->light_state_ = light;
 
-    if (this->light_switch_ != nullptr)
+    if (this->light_select_ != nullptr &&
+        this->light_select_->current_option() != this->light_mode_)
     {
-        this->light_switch_->publish_state(this->light_state_);
+        this->light_select_->publish_state(this->light_mode_);
     }
 }
 
@@ -279,16 +287,6 @@ climate::ClimateAction GreeAC::determine_action()
  * Sensor handling
  */
 
-void GreeAC::set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor)
-{
-    this->current_temperature_sensor_ = current_temperature_sensor;
-    this->current_temperature_sensor_->add_on_state_callback([this](float state)
-        {
-            this->current_temperature = state;
-            this->publish_state();
-        });
-}
-
 void GreeAC::set_vertical_swing_select(select::Select *vertical_swing_select)
 {
     this->vertical_swing_select_ = vertical_swing_select;
@@ -333,13 +331,14 @@ void GreeAC::set_display_unit_select(select::Select *display_unit_select)
     });
 }
 
-void GreeAC::set_light_switch(switch_::Switch *light_switch)
+void GreeAC::set_light_select(select::Select *light_select)
 {
-    this->light_switch_ = light_switch;
-    this->light_switch_->add_on_state_callback([this](bool state) {
-        if (state == this->light_state_)
+    this->light_select_ = light_select;
+    this->light_select_->add_on_state_callback([this](size_t index) {
+        auto value = this->light_select_->at(index);
+        if (!value.has_value() || *value == this->light_mode_)
             return;
-        this->on_light_change(state);
+        this->on_light_mode_change(*value);
     });
 }
 

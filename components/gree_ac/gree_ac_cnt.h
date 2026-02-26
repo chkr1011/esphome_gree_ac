@@ -158,7 +158,7 @@ class GreeACCNT : public GreeAC {
         void on_display_change(const std::string &display) override;
         void on_display_unit_change(const std::string &display_unit) override;
 
-        void on_light_change(bool light) override;
+        void on_light_mode_change(const std::string &mode) override;
         void on_ionizer_change(bool ionizer) override;
         void on_beeper_change(bool beeper) override;
         void on_sleep_change(bool sleep) override;

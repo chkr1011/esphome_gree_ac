@@ -124,6 +124,11 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         reqmodechange = true;
         this->update_ = ACUpdate::UpdateStart;
         this->mode = *call.get_mode();
+
+        if (this->light_mode_ == light_options::AUTO)
+        {
+            this->light_state_ = (this->mode != climate::CLIMATE_MODE_OFF);
+        }
     }
 
     if (call.get_target_temperature().has_value())
@@ -293,6 +298,8 @@ void GreeACCNT::send_params_set_packet()
                     break;
                 case climate::CLIMATE_MODE_HEAT:
                     mode = protocol::REPORT_MODE_HEAT;
+                    break;
+                default:
                     break;
             }
             power = false;
@@ -707,11 +714,22 @@ void GreeACCNT::handle_packet()
 bool GreeACCNT::processUnitReport()
 {
     bool hasChanged = false;
+    bool modeChanged = false;
 
     climate::ClimateMode newMode = determine_mode();
     if (this->mode != newMode) {
         this->mode = newMode;
         hasChanged = true;
+        modeChanged = true;
+
+        if (this->light_mode_ == light_options::AUTO)
+        {
+            bool new_light_state = (this->mode != climate::CLIMATE_MODE_OFF);
+            if (this->light_state_ != new_light_state) {
+                this->light_state_ = new_light_state;
+                this->update_ = ACUpdate::UpdateStart;
+            }
+        }
     }
 
     const char* newFanMode = determine_fan_mode();
@@ -729,14 +747,10 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
     
-    /* if there is no external sensor mapped to represent current temperature we will get data from AC unit */
-    if (this->current_temperature_sensor_ == nullptr)
-    {
-        float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF);
-        if (this->current_temperature != newCurrentTemperature) {
-            this->current_temperature = newCurrentTemperature;
-            hasChanged = true;
-        }
+    float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF);
+    if (this->current_temperature != newCurrentTemperature) {
+        this->current_temperature = newCurrentTemperature;
+        hasChanged = true;
     }
 
     const char* verticalSwing = determine_vertical_swing();
@@ -772,10 +786,44 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
-    bool light = determine_light();
-    if (this->light_state_ != light) {
-        this->update_light(light);
-        hasChanged = true;
+    bool light_reported = determine_light();
+    if (this->light_state_ != light_reported || (this->light_select_ != nullptr && this->light_select_->current_option().empty())) {
+        if (this->light_mode_ == light_options::AUTO)
+        {
+            if (!modeChanged) {
+                // Remote override: AC power state did not change, but light status changed.
+                // We accept the new status as our desired state.
+                this->light_state_ = light_reported;
+            }
+            // else: Mode changed, we keep our calculated light_state_ and UpdateStart set above.
+
+            this->update_light(this->light_state_);
+            hasChanged = true;
+        }
+        else if (this->light_mode_ == light_options::OFF)
+        {
+            if (light_reported == true) {
+                // Enforce OFF: unit reported light ON, so we force it back to OFF.
+                this->update_ = ACUpdate::UpdateStart;
+                this->light_state_ = false;
+            } else {
+                this->light_state_ = false;
+                this->update_light(this->light_state_);
+                hasChanged = true;
+            }
+        }
+        else if (this->light_mode_ == light_options::ON)
+        {
+            if (light_reported == false) {
+                // Enforce ON: unit reported light OFF, so we force it back to ON.
+                this->update_ = ACUpdate::UpdateStart;
+                this->light_state_ = true;
+            } else {
+                this->light_state_ = true;
+                this->update_light(this->light_state_);
+                hasChanged = true;
+            }
+        }
     }
 
     const char* display_unit = determine_display_unit();
@@ -1084,15 +1132,28 @@ void GreeACCNT::on_display_unit_change(const std::string &display_unit)
     this->display_unit_state_ = display_unit;
 }
 
-void GreeACCNT::on_light_change(bool light)
+void GreeACCNT::on_light_mode_change(const std::string &mode)
 {
     if (this->state_ != ACState::Ready)
         return;
 
-    ESP_LOGD(TAG, "Setting light");
+    ESP_LOGD(TAG, "Setting light mode to %s", mode.c_str());
 
     this->update_ = ACUpdate::UpdateStart;
-    this->light_state_ = light;
+    this->light_mode_ = mode;
+
+    if (this->light_mode_ == light_options::AUTO)
+    {
+        this->light_state_ = (this->mode != climate::CLIMATE_MODE_OFF);
+    }
+    else if (this->light_mode_ == light_options::ON)
+    {
+        this->light_state_ = true;
+    }
+    else
+    {
+        this->light_state_ = false;
+    }
 }
 
 void GreeACCNT::on_ionizer_change(bool ionizer)
