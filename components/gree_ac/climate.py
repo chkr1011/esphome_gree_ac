@@ -30,8 +30,8 @@ CONF_HORIZONTAL_SWING_SELECT    = "horizontal_swing_select"
 CONF_VERTICAL_SWING_SELECT      = "vertical_swing_select"
 CONF_DISPLAY_SELECT             = "display_select"
 CONF_DISPLAY_UNIT_SELECT        = "display_unit_select"
+CONF_LIGHT_SELECT               = "light_select"
 
-CONF_LIGHT_SWITCH               = "light_switch"
 CONF_IONIZER_SWITCH             = "ionizer_switch"
 CONF_BEEPER_SWITCH              = "beeper_switch"
 CONF_SLEEP_SWITCH               = "sleep_switch"
@@ -45,6 +45,12 @@ CONF_QUIET_SELECT               = "quiet_select"
 CONF_CURRENT_TEMPERATURE_SENSOR = "current_temperature_sensor"
 
 QUIET_OPTIONS = [
+    "Off",
+    "On",
+    "Auto",
+]
+
+LIGHT_OPTIONS = [
     "Off",
     "On",
     "Auto",
@@ -93,7 +99,7 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_VERTICAL_SWING_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_DISPLAY_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_DISPLAY_UNIT_SELECT): cv.declare_id(GreeACSelect),
-        cv.GenerateID(CONF_LIGHT_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_LIGHT_SELECT): cv.declare_id(GreeACSelect),
         cv.GenerateID(CONF_IONIZER_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_BEEPER_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_SLEEP_SWITCH): cv.declare_id(GreeACSwitch),
@@ -157,6 +163,13 @@ async def to_code(config):
             "set_quiet_select",
             "mdi:headphones",
         ),
+        (
+            CONF_LIGHT_SELECT,
+            "Light",
+            LIGHT_OPTIONS,
+            "set_light_select",
+            "mdi:lightbulb-on-outline",
+        ),
     ]
     for conf_key, name, options, setter, icon in selects:
         sel_id = config[conf_key]
@@ -168,7 +181,6 @@ async def to_code(config):
         cg.add(getattr(var, setter)(sel_var))
 
     switches = [
-        (CONF_LIGHT_SWITCH, "Light", "set_light_switch", "mdi:lightbulb-on-outline"),
         (CONF_IONIZER_SWITCH, "Ionizer", "set_ionizer_switch", "mdi:pine-tree"),
         (CONF_BEEPER_SWITCH, "Beeper", "set_beeper_switch", "mdi:bell-ring"),
         (CONF_SLEEP_SWITCH, "Sleep", "set_sleep_switch", "mdi:power-sleep"),

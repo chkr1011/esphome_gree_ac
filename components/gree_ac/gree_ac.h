@@ -68,6 +68,13 @@ namespace display_unit_options{
     const char* const DEGF = "F";
 }
 
+/* this must be same as LIGHT_OPTIONS in climate.py */
+namespace light_options{
+    const char* const OFF   = "Off";
+    const char* const ON    = "On";
+    const char* const AUTO  = "Auto";
+}
+
 typedef enum {
         STATE_WAIT_SYNC,
         STATE_RECIEVE,
@@ -90,7 +97,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void set_display_select(select::Select *display_select);
         void set_display_unit_select(select::Select *display_unit_select);
 
-        void set_light_switch(switch_::Switch *light_switch);
+        void set_light_select(select::Select *light_select);
         void set_ionizer_switch(switch_::Switch *ionizer_switch);
         void set_beeper_switch(switch_::Switch *beeper_switch);
         void set_sleep_switch(switch_::Switch *sleep_switch);
@@ -114,7 +121,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         select::Select *display_select_          = nullptr; /* Select for setting display mode */
         select::Select *display_unit_select_     = nullptr; /* Select for setting display temperature unit */
 
-        switch_::Switch *light_switch_           = nullptr; /* Switch for light */
+        select::Select *light_select_            = nullptr; /* Select for light */
         switch_::Switch *ionizer_switch_         = nullptr; /* Switch for ionizer */
         switch_::Switch *beeper_switch_          = nullptr; /* Switch for beeper */
         switch_::Switch *sleep_switch_           = nullptr; /* Switch for sleep */
@@ -133,6 +140,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         std::string display_state_;
         std::string display_unit_state_;
         std::string quiet_state_;
+        std::string light_mode_;
 
         bool light_state_;
         bool ionizer_state_;
@@ -181,7 +189,7 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         virtual void on_display_change(const std::string &display) = 0;
         virtual void on_display_unit_change(const std::string &display_unit) = 0;
 
-        virtual void on_light_change(bool light) = 0;
+        virtual void on_light_mode_change(const std::string &mode) = 0;
         virtual void on_ionizer_change(bool ionizer) = 0;
         virtual void on_beeper_change(bool beeper) = 0;
         virtual void on_sleep_change(bool sleep) = 0;
