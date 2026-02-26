@@ -108,8 +108,6 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         void set_quiet_select(select::Select *quiet_select);
 
-        void set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor);
-
         void setup() override;
         void loop() override;
         void dump_config() override;
@@ -131,8 +129,6 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         switch_::Switch *ifeel_switch_           = nullptr; /* Switch for I-Feel */
 
         select::Select *quiet_select_            = nullptr; /* Select for quiet mode */
-
-        sensor::Sensor *current_temperature_sensor_ = nullptr; /* If user wants to replace reported temperature by an external sensor readout */
 
         std::string vertical_swing_state_;
         std::string horizontal_swing_state_;

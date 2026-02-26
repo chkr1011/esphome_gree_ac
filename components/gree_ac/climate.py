@@ -42,8 +42,6 @@ CONF_IFEEL_SWITCH               = "ifeel_switch"
 
 CONF_QUIET_SELECT               = "quiet_select"
 
-CONF_CURRENT_TEMPERATURE_SENSOR = "current_temperature_sensor"
-
 QUIET_OPTIONS = [
     "Off",
     "On",
@@ -108,7 +106,6 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_TURBO_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_IFEEL_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_QUIET_SELECT): cv.declare_id(GreeACSelect),
-        cv.Optional(CONF_CURRENT_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -198,6 +195,3 @@ async def to_code(config):
         await cg.register_component(sw_var, sw_conf)
         cg.add(getattr(var, setter)(sw_var))
 
-    if CONF_CURRENT_TEMPERATURE_SENSOR in config:
-        sens = await cg.get_variable(config[CONF_CURRENT_TEMPERATURE_SENSOR])
-        cg.add(var.set_current_temperature_sensor(sens))

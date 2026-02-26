@@ -287,16 +287,6 @@ climate::ClimateAction GreeAC::determine_action()
  * Sensor handling
  */
 
-void GreeAC::set_current_temperature_sensor(sensor::Sensor *current_temperature_sensor)
-{
-    this->current_temperature_sensor_ = current_temperature_sensor;
-    this->current_temperature_sensor_->add_on_state_callback([this](float state)
-        {
-            this->current_temperature = state;
-            this->publish_state();
-        });
-}
-
 void GreeAC::set_vertical_swing_select(select::Select *vertical_swing_select)
 {
     this->vertical_swing_select_ = vertical_swing_select;

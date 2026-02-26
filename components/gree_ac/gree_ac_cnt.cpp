@@ -747,14 +747,10 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
     
-    /* if there is no external sensor mapped to represent current temperature we will get data from AC unit */
-    if (this->current_temperature_sensor_ == nullptr)
-    {
-        float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF);
-        if (this->current_temperature != newCurrentTemperature) {
-            this->current_temperature = newCurrentTemperature;
-            hasChanged = true;
-        }
+    float newCurrentTemperature = (float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF);
+    if (this->current_temperature != newCurrentTemperature) {
+        this->current_temperature = newCurrentTemperature;
+        hasChanged = true;
     }
 
     const char* verticalSwing = determine_vertical_swing();
