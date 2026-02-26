@@ -299,6 +299,8 @@ void GreeACCNT::send_params_set_packet()
                 case climate::CLIMATE_MODE_HEAT:
                     mode = protocol::REPORT_MODE_HEAT;
                     break;
+                default:
+                    break;
             }
             power = false;
             break;
@@ -789,7 +791,7 @@ bool GreeACCNT::processUnitReport()
     }
 
     bool light_reported = determine_light();
-    if (this->light_state_ != light_reported || (this->light_select_ != nullptr && !this->light_select_->current_option().has_value())) {
+    if (this->light_state_ != light_reported || (this->light_select_ != nullptr && this->light_select_->current_option().empty())) {
         if (this->light_mode_ == light_options::AUTO)
         {
             if (!modeChanged) {
