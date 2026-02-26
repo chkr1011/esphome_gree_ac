@@ -768,7 +768,7 @@ bool GreeACCNT::processUnitReport()
     }
 
     const char* display = determine_display();
-    if (display == display_options::ACT || this->mode != climate::CLIMATE_MODE_OFF) {
+    if (this->display_state_.empty() || display == display_options::ACT || this->mode != climate::CLIMATE_MODE_OFF) {
         if (this->display_state_ != display) {
             this->update_display(display);
             hasChanged = true;
