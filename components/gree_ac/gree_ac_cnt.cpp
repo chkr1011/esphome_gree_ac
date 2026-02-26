@@ -11,13 +11,11 @@ namespace CNT {
 static const char *const TAG = "gree_ac.serial";
 
 static const uint8_t ALLOWED_PACKETS[] = {protocol::CMD_IN_UNIT_REPORT};
-static const uint8_t BYTES_TO_CHECK[] = {4, 5, 6, 8, 9, 11, 16, 18, 40};
 
 void GreeACCNT::setup()
 {
     GreeAC::setup();
     ESP_LOGD(TAG, "Using serial protocol for Gree AC");
-    memset(this->lastpacket, 0, sizeof(this->lastpacket));
 
     this->startup_special_sent_ = false;
     this->mac_packets_pending_ = 3;
@@ -134,6 +132,7 @@ void GreeACCNT::control(const climate::ClimateCall &call)
     if (call.get_target_temperature().has_value())
     {
         ESP_LOGV(TAG, "Requested target teperature change");
+        reqmodechange = true;
         this->update_ = ACUpdate::UpdateStart;
         this->target_temperature = *call.get_target_temperature();
         if (this->target_temperature < MIN_TEMPERATURE)
@@ -466,13 +465,21 @@ void GreeACCNT::send_params_set_packet()
 
     /* DISPLAY --------------------------------------------------------------------------- */
     uint8_t display_mode = protocol::REPORT_DISP_MODE_SET;
-    if (this->display_state_ == display_options::SET)
+    if (this->mode != climate::CLIMATE_MODE_OFF)
     {
-        display_mode = protocol::REPORT_DISP_MODE_SET;
+        if (this->display_state_ == display_options::SET)
+        {
+            display_mode = protocol::REPORT_DISP_MODE_SET;
+        }
+        else if (this->display_state_ == display_options::ACT)
+        {
+            display_mode = protocol::REPORT_DISP_MODE_ACT;
+        }
     }
-    else if (this->display_state_ == display_options::ACT)
+    else
     {
-        display_mode = protocol::REPORT_DISP_MODE_ACT;
+        // When the AC is off always sent "set" no matter what the user selected.
+        display_mode = protocol::REPORT_DISP_MODE_SET;
     }
 
     payload[protocol::REPORT_DISP_MODE_BYTE] |= (display_mode << protocol::REPORT_DISP_MODE_POS);
@@ -527,8 +534,6 @@ void GreeACCNT::send_params_set_packet()
 
     /* Do the command, length */
 
-    memcpy(this->lastpacket, payload, protocol::SET_PACKET_LEN);
-    
     uint8_t full_packet[protocol::SET_PACKET_LEN + 5];
     full_packet[0] = protocol::SYNC;
     full_packet[1] = protocol::SYNC;
@@ -676,27 +681,9 @@ void GreeACCNT::handle_packet()
         /* now process the data */
         bool hasChanged = this->processUnitReport();
 
-        // Detect if AC state differs from what we last sent (indicates remote change)
-        bool remoteChanged = false;
-        for (uint8_t i : BYTES_TO_CHECK)
+        if (hasChanged || reqmodechange)
         {
-            if (i < 45) {
-                uint8_t last = lastpacket[i];
-                uint8_t current = this->serialProcess_.data[i];
-                if (i == protocol::SET_NOCHANGE_BYTE) {
-                    last &= ~protocol::SET_NOCHANGE_MASK;
-                    current &= ~protocol::SET_NOCHANGE_MASK;
-                }
-                if (last != current) {
-                    remoteChanged = true;
-                    break;
-                }
-            }
-        }
-
-        if (hasChanged || remoteChanged || reqmodechange)
-        {
-            ESP_LOGD(TAG, "State update: hasChanged=%d, remoteChanged=%d, reqmodechange=%d", hasChanged, remoteChanged, reqmodechange);
+            ESP_LOGD(TAG, "State update: hasChanged=%d, reqmodechange=%d", hasChanged, reqmodechange);
             this->publish_state();
             reqmodechange = false;
         }
@@ -781,9 +768,11 @@ bool GreeACCNT::processUnitReport()
     }
 
     const char* display = determine_display();
-    if (this->display_state_ != display) {
-        this->update_display(display);
-        hasChanged = true;
+    if (display == display_options::ACT || this->mode != climate::CLIMATE_MODE_OFF) {
+        if (this->display_state_ != display) {
+            this->update_display(display);
+            hasChanged = true;
+        }
     }
 
     bool light_reported = determine_light();
@@ -1095,6 +1084,7 @@ void GreeACCNT::on_vertical_swing_change(const std::string &swing)
 
     ESP_LOGD(TAG, "Setting vertical swing position");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->vertical_swing_state_ = swing;
 }
@@ -1106,6 +1096,7 @@ void GreeACCNT::on_horizontal_swing_change(const std::string &swing)
 
     ESP_LOGD(TAG, "Setting horizontal swing position");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->horizontal_swing_state_ = swing;
 }
@@ -1117,6 +1108,7 @@ void GreeACCNT::on_display_change(const std::string &display)
 
     ESP_LOGD(TAG, "Setting display mode");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->display_state_ = display;
 }
@@ -1128,6 +1120,7 @@ void GreeACCNT::on_display_unit_change(const std::string &display_unit)
 
     ESP_LOGD(TAG, "Setting display unit");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->display_unit_state_ = display_unit;
 }
@@ -1139,6 +1132,7 @@ void GreeACCNT::on_light_mode_change(const std::string &mode)
 
     ESP_LOGD(TAG, "Setting light mode to %s", mode.c_str());
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->light_mode_ = mode;
 
@@ -1163,6 +1157,7 @@ void GreeACCNT::on_ionizer_change(bool ionizer)
 
     ESP_LOGD(TAG, "Setting ionizer");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->ionizer_state_ = ionizer;
 }
@@ -1174,6 +1169,7 @@ void GreeACCNT::on_beeper_change(bool beeper)
 
     ESP_LOGD(TAG, "Setting beeper");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->beeper_state_ = beeper;
 }
@@ -1185,6 +1181,7 @@ void GreeACCNT::on_sleep_change(bool sleep)
 
     ESP_LOGD(TAG, "Setting sleep");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->sleep_state_ = sleep;
 }
@@ -1196,6 +1193,7 @@ void GreeACCNT::on_xfan_change(bool xfan)
 
     ESP_LOGD(TAG, "Setting xfan");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->xfan_state_ = xfan;
 }
@@ -1207,6 +1205,7 @@ void GreeACCNT::on_powersave_change(bool powersave)
 
     ESP_LOGD(TAG, "Setting powersave");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->powersave_state_ = powersave;
 }
@@ -1218,6 +1217,7 @@ void GreeACCNT::on_turbo_change(bool turbo)
 
     ESP_LOGD(TAG, "Setting turbo");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->turbo_state_ = turbo;
 
@@ -1234,6 +1234,7 @@ void GreeACCNT::on_ifeel_change(bool ifeel)
 
     ESP_LOGD(TAG, "Setting ifeel");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->ifeel_state_ = ifeel;
 }
@@ -1245,6 +1246,7 @@ void GreeACCNT::on_quiet_change(const std::string &quiet)
 
     ESP_LOGD(TAG, "Setting quiet mode");
 
+    reqmodechange = true;
     this->update_ = ACUpdate::UpdateStart;
     this->quiet_state_ = quiet;
 
