@@ -18,14 +18,22 @@ void GreeACCNT::setup()
     GreeAC::setup();
     ESP_LOGD(TAG, "Using serial protocol for Gree AC");
     memset(this->lastpacket, 0, sizeof(this->lastpacket));
-    this->mac_sent_ = false;
+
+    this->startup_special_sent_ = false;
+    this->mac_packets_pending_ = 6;
+    this->last_mac_sequence_millis_ = 0;
     this->last_sync_time_sent_ = millis() - 10000;
+    this->last_packet_duration_ms_ = 0;
+    /* allow immediate transmission of the first packet */
+    this->last_packet_sent_ = millis() - protocol::TIME_REFRESH_PERIOD_MS - 1000;
 }
 
 void GreeACCNT::loop()
 {
     /* this reads data from UART */
     GreeAC::loop();
+
+    uint32_t now = millis();
 
     /* we have a frame from AC */
     if (this->serialProcess_.state == STATE_COMPLETE)
@@ -38,7 +46,7 @@ void GreeACCNT::loop()
 
         if (verify_packet())  /* Verify length, header, counter and checksum */
         {
-            this->last_packet_received_ = millis();  /* Set the time at which we received our last packet */
+            this->last_packet_received_ = now;  /* Set the time at which we received our last packet */
 
             /* A valid recieved packet of accepted type marks module as being ready */
             if (this->state_ != ACState::Ready)
@@ -59,17 +67,35 @@ void GreeACCNT::loop()
     }
 
     /* we will send a packet to the AC as a response to indicate changes */
-    if (millis() - this->last_sync_time_sent_ >= 10000)
+    /* Check for 330ms gap since last packet finished transmission */
+    if (now - this->last_packet_sent_ >= (protocol::TIME_REFRESH_PERIOD_MS + this->last_packet_duration_ms_))
     {
-        send_sync_time();
-    }
-    else if (this->state_ == ACState::Ready && !this->mac_sent_)
-    {
-        send_mac_report();
-    }
-    else
-    {
-        send_packet();
+        if (!this->startup_special_sent_)
+        {
+            send_special_startup_packet();
+        }
+        else if (this->mac_packets_pending_ > 0)
+        {
+            send_mac_report_packet();
+            this->mac_packets_pending_--;
+            if (this->mac_packets_pending_ == 0)
+            {
+                this->last_mac_sequence_millis_ = now;
+            }
+        }
+        else if (now - this->last_sync_time_sent_ >= 10000)
+        {
+            send_sync_time_packet();
+        }
+        else if (now - this->last_mac_sequence_millis_ >= protocol::TIME_MAC_CYCLE_PERIOD_MS)
+        {
+            this->mac_packets_pending_ = 6;
+            /* next loop will start sending them */
+        }
+        else
+        {
+            send_params_set_packet();
+        }
     }
 
     /* if there are no packets for some time - mark module as not ready */
@@ -163,10 +189,30 @@ void GreeACCNT::control(const climate::ClimateCall &call)
     }
 }
 
+void GreeACCNT::transmit_packet(const uint8_t *packet, size_t length)
+{
+    this->last_packet_sent_ = millis();
+    this->last_packet_duration_ms_ = (length * 11000) / 4800;
+    write_array(packet, length);
+    log_packet(packet, length, true);
+}
+
+void GreeACCNT::send_special_startup_packet()
+{
+    uint8_t packet[] = {
+        0x7E, 0x7E, 0x10, 0x02,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00,
+        0x28, 0x1E, 0x19, 0x23, 0x23, 0x00, 0xBA
+    };
+    transmit_packet(packet, sizeof(packet));
+    this->startup_special_sent_ = true;
+    ESP_LOGD(TAG, "Sent special startup packet");
+}
+
 /*
  * Send a raw packet, as is
  */
-void GreeACCNT::send_packet()
+void GreeACCNT::send_params_set_packet()
 {
     if (this->wait_response_)
     {
@@ -180,12 +226,6 @@ void GreeACCNT::send_packet()
             ESP_LOGW(TAG, "Timed out waiting for response from AC unit");
             this->wait_response_ = false;
         }
-    }
-
-    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
-    {
-        /* do net send packet too often */
-        return;
     }
 
     uint8_t payload[protocol::SET_PACKET_LEN];
@@ -498,15 +538,9 @@ void GreeACCNT::send_packet()
     }
     full_packet[protocol::SET_PACKET_LEN + 4] = checksum;
 
-    //ESP_LOGV(TAG, "Stamp1: %lx", this->last_packet_sent_);
-    this->last_packet_sent_ = millis();  /* Save the time when we sent the last packet */
-    
     this->wait_response_ = true;
-    write_array(full_packet, sizeof(full_packet));                 /* Sent the packet by UART */
-    log_packet(full_packet, sizeof(full_packet), true);            /* Log uart for debug purposes */
-   
+    transmit_packet(full_packet, sizeof(full_packet));
 
-    
     /* update setting state-machine */
     switch(this->update_)
     {
@@ -524,14 +558,9 @@ void GreeACCNT::send_packet()
     }
 }
 
-void GreeACCNT::send_mac_report()
+void GreeACCNT::send_mac_report_packet()
 {
-    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
-    {
-        return;
-    }
-
-    uint8_t full_packet[17];
+    uint8_t full_packet[16];
     uint8_t mac[6];
     get_mac_address_raw(mac);
 
@@ -554,38 +583,11 @@ void GreeACCNT::send_mac_report()
     full_packet[15] = checksum;
 
     ESP_LOGD(TAG, "Sending MAC report: %02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    this->last_packet_sent_ = millis();
-    write_array(full_packet, 16); // Sync(2) + Len(1) + Data(13) = 16 bytes total including checksum?
-    // Wait. 7E 7E 0D 04 07 00 00 00 MAC(6) 00 CRC
-    // 0: 7E
-    // 1: 7E
-    // 2: 0D (LEN)
-    // 3: 04 (CMD)
-    // 4: 07
-    // 5: 00
-    // 6: 00
-    // 7: 00
-    // 8: MAC0
-    // 9: MAC1
-    // 10: MAC2
-    // 11: MAC3
-    // 12: MAC4
-    // 13: MAC5
-    // 14: 00
-    // 15: CRC
-    // Total 16 bytes.
-
-    log_packet(full_packet, 16, true);
-    this->mac_sent_ = true;
+    transmit_packet(full_packet, 16);
 }
 
-void GreeACCNT::send_sync_time()
+void GreeACCNT::send_sync_time_packet()
 {
-    if (millis() - this->last_packet_sent_ < protocol::TIME_REFRESH_PERIOD_MS)
-    {
-        return;
-    }
-
     uint8_t full_packet[17];
     full_packet[0] = protocol::SYNC;
     full_packet[1] = protocol::SYNC;
@@ -603,10 +605,8 @@ void GreeACCNT::send_sync_time()
     full_packet[16] = checksum;
 
     ESP_LOGD(TAG, "Sending sync time packet");
-    write_array(full_packet, 17);
-    log_packet(full_packet, 17, true);
+    transmit_packet(full_packet, 17);
     this->last_sync_time_sent_ = millis();
-    this->last_packet_sent_ = millis();
 }
 
 /*
