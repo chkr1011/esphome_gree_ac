@@ -57,6 +57,7 @@ void GreeACCNT::loop()
             {
                 handle_packet(); /* this will update state of components in HA as well as internal settings */
             }
+            yield();
         }
 
         /* restart for next packet */
@@ -199,6 +200,7 @@ void GreeACCNT::transmit_packet(const uint8_t *packet, size_t length)
     this->last_packet_duration_ms_ = (length * 11000) / 4800;
     write_array(packet, length);
     log_packet(packet, length, true);
+    yield();
 }
 
 void GreeACCNT::send_special_startup_packet()

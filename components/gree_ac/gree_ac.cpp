@@ -66,16 +66,19 @@ void GreeAC::loop()
 }
 
 void GreeAC::read_data() {
-  while (available()) {
+  uint8_t loop_count = 0;
+  while (available() && loop_count < 32) {
     if (this->serialProcess_.state == STATE_COMPLETE) {
       break;
     }
+    loop_count++;
 
     uint8_t c;
     if (!this->read_byte(&c)) {
       break;
     }
-    this->serialProcess_.last_byte_time = millis();
+    uint32_t now = millis();
+    this->serialProcess_.last_byte_time = now;
 
     this->serialProcess_.data.push_back(c);
     size_t s = this->serialProcess_.data.size();
