@@ -197,7 +197,6 @@ class GreeACCNT : public GreeAC {
         void transmit_packet(const uint8_t *packet, size_t length);
 
         bool reqmodechange = false;
-        unsigned char lastpacket[60];
 
         bool verify_packet();
         void handle_packet();
