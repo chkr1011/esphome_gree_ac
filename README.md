@@ -100,7 +100,8 @@ captive_portal:
 # Enable logging
 logger:
   baud_rate: 0 # disable LOG output on UART as UART is used for Gree AC unit
-  level: VERBOSE
+  # Set the level to VERBOSE to enable RX and TX packet dumping to console.
+  level: DEBUG
 
 uart:
   tx_pin: 1
