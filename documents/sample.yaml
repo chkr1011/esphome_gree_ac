@@ -35,7 +35,8 @@ captive_portal:
 # Enable logging
 logger:
   baud_rate: 0 # disable LOG output on UART as UART is used for Gree AC unit
-  level: VERBOSE
+  # Set the level to VERBOSE to enable RX and TX packet dumping to console.
+  level: DEBUG
 
 uart:
   tx_pin: 1
@@ -43,14 +44,10 @@ uart:
   baud_rate: 4800
   parity: EVEN
 
-time:
-  - platform: sntp
-
 external_components:
-  - source:
-      type: local
-      path: ../components
+  - source: github://chkr1011/esphome_gree_ac
     components: [gree_ac]
+    refresh: 0s
 
 climate:
   - platform: gree_ac
