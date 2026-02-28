@@ -108,14 +108,10 @@ uart:
   baud_rate: 4800
   parity: EVEN
 
-time:
-  - platform: sntp
-
 external_components:
-  - source:
-      type: local
-      path: components
+  - source: github://chkr1011/esphome_gree_ac
     components: [gree_ac]
+    refresh: 0s
 
 climate:
   - platform: gree_ac
