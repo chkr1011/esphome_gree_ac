@@ -50,7 +50,6 @@ void GreeAC::setup()
 
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
-    this->serialProcess_.data.reserve(DATA_MAX);
     this->serialProcess_.size = 0;
 
     ESP_LOGI(TAG, "Gree AC component v%s starting...", VERSION);
