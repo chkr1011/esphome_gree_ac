@@ -172,6 +172,12 @@ class GreeACCNT : public GreeAC {
         void loop() override;
 
     protected:
+        uint8_t calculate_checksum_(const uint8_t *data, size_t len);
+        void finalize_checksum_(uint8_t *data, size_t len);
+        bool verify_checksum_(const uint8_t *data, size_t len);
+
+        void mark_for_update_();
+
         ACState state_ = ACState::Initializing; /* Stores if the AC is responsive or not */
         ACUpdate update_ = ACUpdate::NoUpdate;  /* Stores if we need tu send update to AC or no */
 

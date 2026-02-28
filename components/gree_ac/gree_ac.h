@@ -83,7 +83,8 @@ typedef enum {
 } SerialProcessState_t;
 
 typedef struct {
-  std::vector<uint8_t> data;
+  uint8_t data[200];
+  size_t size;
   uint8_t frame_size;
   SerialProcessState_t state;
   uint32_t last_byte_time;
@@ -158,26 +159,24 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         climate::ClimateTraits traits() override;
 
-        void read_data();
+        bool update_current_temperature(float temperature);
+        bool update_target_temperature(float temperature);
 
-        void update_current_temperature(float temperature);
-        void update_target_temperature(float temperature);
+        bool update_swing_horizontal(const std::string &swing);
+        bool update_swing_vertical(const std::string &swing);
 
-        void update_swing_horizontal(const std::string &swing);
-        void update_swing_vertical(const std::string &swing);
+        bool update_display(const std::string &display);
+        bool update_display_unit(const std::string &display_unit);
 
-        void update_display(const std::string &display);
-        void update_display_unit(const std::string &display_unit);
-
-        void update_light(bool light);
-        void update_ionizer(bool ionizer);
-        void update_beeper(bool beeper);
-        void update_sleep(bool sleep);
-        void update_xfan(bool xfan);
-        void update_powersave(bool powersave);
-        void update_turbo(bool turbo);
-        void update_ifeel(bool ifeel);
-        void update_quiet(const std::string &quiet);
+        bool update_light(bool light);
+        bool update_ionizer(bool ionizer);
+        bool update_beeper(bool beeper);
+        bool update_sleep(bool sleep);
+        bool update_xfan(bool xfan);
+        bool update_powersave(bool powersave);
+        bool update_turbo(bool turbo);
+        bool update_ifeel(bool ifeel);
+        bool update_quiet(const std::string &quiet);
 
         virtual void on_horizontal_swing_change(const std::string &swing) = 0;
         virtual void on_vertical_swing_change(const std::string &swing) = 0;
@@ -198,7 +197,6 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         climate::ClimateAction determine_action();
 
         void log_packet(const uint8_t *data, size_t len, bool outgoing = false);
-        void log_packet(const std::vector<uint8_t> &data, bool outgoing = false);
 
     protected:
         static const char *const VERSION;
