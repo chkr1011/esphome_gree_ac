@@ -29,6 +29,8 @@ This component provides a comprehensive set of controls:
     *   **Powersave**: Enable/disable power-saving mode.
     *   **Turbo**: Force maximum cooling/heating.
     *   **I-Feel**: Use the remote's temperature sensor (if supported).
+*   **Package logging**:
+    * The component will dump every sent and received UART packet to the console. This requires the log level set to VERBOSE.      
 
 ## Supported Devices
 
