@@ -1,35 +1,130 @@
-# Open source WIFI module replacement for Gree protocol based AC's for Home Assistant.
-This repository adds support for ESP-based WiFi modules to interface with Gree/Gree AC units.
-It's forked from https://github.com/piotrva/esphome_gree_ac, big thanks to @piotrva for his work!
+# ESPHome Gree/Sinclair AC Component
 
-My fork currently differs from the original code in the following ways. What I did:
+**⚠️ WARNING: USE AT YOUR OWN RISK! ⚠️**
+**This project can potentially cause permanent damage to your Air Conditioning unit. The authors and contributors provide NO WARRANTY and accept NO RESPONSIBILITY for any damage, data loss, or other issues caused by the use of this software or hardware modifications. ALWAYS disconnect power before working on your AC.**
 
-1) Fixed the fan mode, tested on Gree/Daizuki/TGM AC's.
-2) Fixed the dropping of commands
-3) Fixed the rejection of commands
-4) Fixed reporting of current temp
-5) Fixed the Fahrenheit mode
-6) Implemented an optional silent mode (no beeping), only works for module sent commands (not for
-   remote control sent commands)
-   
-It's now compatible with GRJWB04-J / Cs532ae wifi modules
+This repository provides an ESPHome component to interface with Gree-protocol based Air Conditioning units (including Sinclair, Vaillant, Daizuki, and TGM) via their internal serial bus. It allows for full control and monitoring through Home Assistant.
 
-# Current state:
-No known problems! if you run into an issue though, please let me know.
+## Features
 
-# HOW TO 
-You can flash this to an ESP module. I used an ESP01-M module, like this one:
-https://nl.aliexpress.com/item/1005008528226032.html
-So that’s both an ESP01 and the ‘adapter board’ for 3.3V ↔ 5V conversion (since the ESP01 uses 3.3V and the AC uses 5V).
+This component provides a comprehensive set of controls:
 
+*   **Climate Entity**:
+    *   Operation modes: Off, Heat, Cool, Dry, Fan only, Auto.
+    *   Fan speeds: Auto, Min, Low, Medium, High, Max.
+    *   Target temperature control (16-30°C).
+    *   Current temperature reporting.
+*   **Select Entities**:
+    *   **Horizontal Swing**: Various positions and full swing.
+    *   **Vertical Swing**: Extensive options for fixed positions and swing ranges.
+    *   **Display Mode**: Toggle between showing "Set temperature" or "Actual temperature" on the AC's panel.
+    *   **Display Unit**: Celsius (C) or Fahrenheit (F).
+    *   **Quiet Mode**: Off, On, or Auto.
+    *   **Light Control**: Off, On, or Auto (synchronized with AC power).
+*   **Switch Entities**:
+    *   **Ionizer (Health)**: Enable/disable the built-in ionizer.
+    *   **Beeper**: Enable/disable the AC's confirmation beep for commands.
+    *   **Sleep Mode**: Enable/disable sleep timer logic.
+    *   **X-Fan**: Keeps the fan running after cooling to dry the coil.
+    *   **Powersave**: Enable/disable power-saving mode.
+    *   **Turbo**: Force maximum cooling/heating.
+    *   **I-Feel**: Use the remote's temperature sensor (if supported).
 
-Create a new project in the ESPbuilder from Home assistant and use my YAML (from the examples directory), copy or modify the info from the generated YAML to mine, where it says '[insert yours]'.
-Then you should be able to compile it. I think you can flash directly from Home Assistant,
-but I downloaded the compiled binary and flashed with: https://github.com/esphome/esphome-flasher/releases
+## Supported Devices
 
-See the 4 module cable photos for wiring (for flashing and the wiring for connecting it to your AC). The connector is a 4 pins “JST XARP-04V”, you can for example order them here: https://es.aliexpress.com/item/1005009830663057.html. Alternatively it's possible to just use dupont cables and then put tape around the 4 ends to simulate the form of a connector (so that it makes it thicker), so that it will sit still in the connector socket, but make sure all 4 cables make connection, I tried that first and you might need to make adjustments because of 1 cable not making solid connection (this might result in errors in the log). So best to use the real connector. 
+The following devices have been reported to work with this component:
 
+*   **Vaillant**: VAI8/5-i
+*   **Gree**: Various models (compatible with GRJWB04-J / Cs532ae WiFi modules)
+*   **Daizuki**: Various models
+*   **TGM**: Various models
+*   **Sinclair**: Various models
 
-After you've connected the module to your AC, it should pop under settings/integrations/esphome as a 'new device' and then you can add it to HA. If not, check if it started a WIFI access point, which it will do if it can't connect to your home wifi. You can then connect to that and configure it from there (via 192.168.4.1)
+**Is your device not on the list?** If it works for you, please contribute by adding your model to the list via a Pull Request!
 
-**USE AT YOUR OWN RISK!**
+## Hardware & Installation
+
+### Required Parts
+To build the interface module, you will typically need:
+*   **ESP8266 Module**: [ESP01-M](https://nl.aliexpress.com/item/1005008528226032.html) or [ESP-07 V1.0](https://www.ebay.de/itm/311619662505).
+*   **Voltage Level Shifter**: An adapter board for 3.3V ↔ 5V conversion (ESP8266 uses 3.3V, AC bus uses 5V).
+*   **Connector**: [JST XARP-04V](https://es.aliexpress.com/item/1005009830663057.html) (4 pins) or a [Gree AC specific cable](https://de.aliexpress.com/item/1005007454451761.html).
+
+### Device Images
+| Device Module | Mounted in AC |
+| :---: | :---: |
+| ![Device](documents/device.jpg) | ![Mounted](documents/device_mounted.jpg) |
+
+### Wiring
+Connect the ESP module to the AC's WiFi module port. Ensure the TX/RX pins are correctly leveled to 5V if required by your AC.
+
+## Sample Configuration
+
+Use the following YAML as a starting point for your ESPHome configuration:
+
+```yaml
+substitutions:
+  node_name: gree # Use a unique name.
+  node_id: Gree_ac    # Use a unique id.
+  friendly_node_name: "Gree AC"
+  deviceid: gree
+  devicename: Kitchen
+
+esphome:
+  name: gree
+  friendly_name: "Gree AC"
+
+esp8266:
+  board: esp01_1m
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "[insert yours]"
+
+ota:
+  - platform: esphome
+    password: "[insert yours]"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Gree Fallback Hotspot"
+    password: "[insert yours]"
+
+captive_portal:
+
+# Enable logging
+logger:
+  baud_rate: 0 # disable LOG output on UART as UART is used for Gree AC unit
+  level: VERBOSE
+
+uart:
+  tx_pin: 1
+  rx_pin: 3
+  baud_rate: 4800
+  parity: EVEN
+
+time:
+  - platform: sntp
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [gree_ac]
+
+climate:
+  - platform: gree_ac
+```
+
+## Credits & Shoutouts
+
+This project is a fork and wouldn't be possible without the initial work of:
+*   [@piotrva](https://github.com/piotrva) - Original implementation of the ESPHome Gree component.
+*   [@gekkehenkie11](https://github.com/gekkehenkie11) - Significant improvements to fan modes, command reliability, and feature additions.
+
+Special thanks to all contributors who have tested and reported on their specific AC models!
