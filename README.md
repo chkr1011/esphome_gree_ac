@@ -1,4 +1,4 @@
-# ESPHome Gree/Sinclair AC Component
+# ESPHome Gree AC Component
 
 **⚠️ WARNING: USE AT YOUR OWN RISK! ⚠️**
 **This project can potentially cause permanent damage to your Air Conditioning unit. The authors and contributors provide NO WARRANTY and accept NO RESPONSIBILITY for any damage, data loss, or other issues caused by the use of this software or hardware modifications. ALWAYS disconnect power before working on your AC.**
