@@ -50,7 +50,7 @@ void GreeAC::setup()
 
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
-    this->serialProcess_.data.reserve(DATA_MAX);
+    this->serialProcess_.size = 0;
 
     ESP_LOGI(TAG, "Gree AC component v%s starting...", VERSION);
 }
@@ -62,10 +62,6 @@ void GreeAC::dump_config() {
 
 void GreeAC::loop()
 {
-    read_data();  // Read data from UART (if there is any)
-}
-
-void GreeAC::read_data() {
   uint8_t loop_count = 0;
   while (available() && loop_count < 32) {
     if (this->serialProcess_.state == STATE_COMPLETE) {
@@ -80,20 +76,22 @@ void GreeAC::read_data() {
     uint32_t now = millis();
     this->serialProcess_.last_byte_time = now;
 
-    this->serialProcess_.data.push_back(c);
-    size_t s = this->serialProcess_.data.size();
+    this->serialProcess_.data[this->serialProcess_.size++] = c;
+    size_t s = this->serialProcess_.size;
 
     // Check for sync marker within packet (resync)
     if (s >= 2 && this->serialProcess_.data[s-2] == 0x7E && this->serialProcess_.data[s-1] == 0x7E) {
         if (s > 2) {
-            this->serialProcess_.data.assign({0x7E, 0x7E});
+            this->serialProcess_.data[0] = 0x7E;
+            this->serialProcess_.data[1] = 0x7E;
+            this->serialProcess_.size = 2;
             s = 2;
         }
     } else if (s == 1 && this->serialProcess_.data[0] != 0x7E) {
-        this->serialProcess_.data.clear();
+        this->serialProcess_.size = 0;
         continue;
     } else if (s == 2 && this->serialProcess_.data[0] == 0x7E && this->serialProcess_.data[1] != 0x7E) {
-        this->serialProcess_.data.clear();
+        this->serialProcess_.size = 0;
         continue;
     }
 
@@ -106,33 +104,44 @@ void GreeAC::read_data() {
     }
 
     if (s >= DATA_MAX) {
-      this->serialProcess_.data.clear();
+      this->serialProcess_.size = 0;
     }
   }
 }
 
-void GreeAC::update_current_temperature(float temperature)
+bool GreeAC::update_current_temperature(float temperature)
 {
     if (temperature > TEMPERATURE_THRESHOLD) {
         ESP_LOGW(TAG, "Received out of range inside temperature: %f", temperature);
-        return;
+        return false;
     }
 
+    if (this->current_temperature == temperature)
+        return false;
+
     this->current_temperature = temperature;
+    return true;
 }
 
-void GreeAC::update_target_temperature(float temperature)
+bool GreeAC::update_target_temperature(float temperature)
 {
     if (temperature > TEMPERATURE_THRESHOLD) {
         ESP_LOGW(TAG, "Received out of range target temperature %.2f", temperature);
-        return;
+        return false;
     }
 
+    if (this->target_temperature == temperature)
+        return false;
+
     this->target_temperature = temperature;
+    return true;
 }
 
-void GreeAC::update_swing_horizontal(const std::string &swing)
+bool GreeAC::update_swing_horizontal(const std::string &swing)
 {
+    if (this->horizontal_swing_state_ == swing)
+        return false;
+
     this->horizontal_swing_state_ = swing;
 
     if (this->horizontal_swing_select_ != nullptr &&
@@ -140,10 +149,14 @@ void GreeAC::update_swing_horizontal(const std::string &swing)
     {
         this->horizontal_swing_select_->publish_state(this->horizontal_swing_state_);
     }
+    return true;
 }
 
-void GreeAC::update_swing_vertical(const std::string &swing)
+bool GreeAC::update_swing_vertical(const std::string &swing)
 {
+    if (this->vertical_swing_state_ == swing)
+        return false;
+
     this->vertical_swing_state_ = swing;
 
     if (this->vertical_swing_select_ != nullptr && 
@@ -151,10 +164,14 @@ void GreeAC::update_swing_vertical(const std::string &swing)
     {
         this->vertical_swing_select_->publish_state(this->vertical_swing_state_);
     }
+    return true;
 }
 
-void GreeAC::update_display(const std::string &display)
+bool GreeAC::update_display(const std::string &display)
 {
+    if (this->display_state_ == display)
+        return false;
+
     this->display_state_ = display;
 
     if (this->display_select_ != nullptr && 
@@ -162,10 +179,14 @@ void GreeAC::update_display(const std::string &display)
     {
         this->display_select_->publish_state(this->display_state_);
     }
+    return true;
 }
 
-void GreeAC::update_display_unit(const std::string &display_unit)
+bool GreeAC::update_display_unit(const std::string &display_unit)
 {
+    if (this->display_unit_state_ == display_unit)
+        return false;
+
     this->display_unit_state_ = display_unit;
 
     if (this->display_unit_select_ != nullptr && 
@@ -173,91 +194,126 @@ void GreeAC::update_display_unit(const std::string &display_unit)
     {
         this->display_unit_select_->publish_state(this->display_unit_state_);
     }
+    return true;
 }
 
-void GreeAC::update_light(bool light)
+bool GreeAC::update_light(bool light)
 {
+    bool changed = (this->light_state_ != light);
     this->light_state_ = light;
 
     if (this->light_select_ != nullptr &&
         this->light_select_->current_option() != this->light_mode_)
     {
         this->light_select_->publish_state(this->light_mode_);
+        changed = true;
     }
+    return changed;
 }
 
-void GreeAC::update_ionizer(bool ionizer)
+bool GreeAC::update_ionizer(bool ionizer)
 {
+    if (this->ionizer_state_ == ionizer)
+        return false;
+
     this->ionizer_state_ = ionizer;
 
     if (this->ionizer_switch_ != nullptr)
     {
         this->ionizer_switch_->publish_state(this->ionizer_state_);
     }
+    return true;
 }
 
-void GreeAC::update_beeper(bool beeper)
+bool GreeAC::update_beeper(bool beeper)
 {
+    if (this->beeper_state_ == beeper)
+        return false;
+
     this->beeper_state_ = beeper;
 
     if (this->beeper_switch_ != nullptr)
     {
         this->beeper_switch_->publish_state(this->beeper_state_);
     }
+    return true;
 }
 
-void GreeAC::update_sleep(bool sleep)
+bool GreeAC::update_sleep(bool sleep)
 {
+    if (this->sleep_state_ == sleep)
+        return false;
+
     this->sleep_state_ = sleep;
 
     if (this->sleep_switch_ != nullptr)
     {
         this->sleep_switch_->publish_state(this->sleep_state_);
     }
+    return true;
 }
 
-void GreeAC::update_xfan(bool xfan)
+bool GreeAC::update_xfan(bool xfan)
 {
+    if (this->xfan_state_ == xfan)
+        return false;
+
     this->xfan_state_ = xfan;
 
     if (this->xfan_switch_ != nullptr)
     {
         this->xfan_switch_->publish_state(this->xfan_state_);
     }
+    return true;
 }
 
-void GreeAC::update_powersave(bool powersave)
+bool GreeAC::update_powersave(bool powersave)
 {
+    if (this->powersave_state_ == powersave)
+        return false;
+
     this->powersave_state_ = powersave;
 
     if (this->powersave_switch_ != nullptr)
     {
         this->powersave_switch_->publish_state(this->powersave_state_);
     }
+    return true;
 }
 
-void GreeAC::update_turbo(bool turbo)
+bool GreeAC::update_turbo(bool turbo)
 {
+    if (this->turbo_state_ == turbo)
+        return false;
+
     this->turbo_state_ = turbo;
 
     if (this->turbo_switch_ != nullptr)
     {
         this->turbo_switch_->publish_state(this->turbo_state_);
     }
+    return true;
 }
 
-void GreeAC::update_ifeel(bool ifeel)
+bool GreeAC::update_ifeel(bool ifeel)
 {
+    if (this->ifeel_state_ == ifeel)
+        return false;
+
     this->ifeel_state_ = ifeel;
 
     if (this->ifeel_switch_ != nullptr)
     {
         this->ifeel_switch_->publish_state(this->ifeel_state_);
     }
+    return true;
 }
 
-void GreeAC::update_quiet(const std::string &quiet)
+bool GreeAC::update_quiet(const std::string &quiet)
 {
+    if (this->quiet_state_ == quiet)
+        return false;
+
     this->quiet_state_ = quiet;
 
     if (this->quiet_select_ != nullptr &&
@@ -265,6 +321,7 @@ void GreeAC::update_quiet(const std::string &quiet)
     {
         this->quiet_select_->publish_state(this->quiet_state_);
     }
+    return true;
 }
 
 climate::ClimateAction GreeAC::determine_action()
@@ -441,10 +498,6 @@ void GreeAC::log_packet(const uint8_t *data, size_t len, bool outgoing)
 #endif
 }
 
-void GreeAC::log_packet(const std::vector<uint8_t> &data, bool outgoing)
-{
-    log_packet(data.data(), data.size(), outgoing);
-}
 
 }  // namespace gree_ac
 }  // namespace esphome
