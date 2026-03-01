@@ -53,7 +53,7 @@ void GreeAC::setup()
     }
 
     if (this->dump_packets_switch_ != nullptr) {
-        this->dump_packets_switch_->publish_state(true);
+        this->dump_packets_switch_->publish_state(false);
     }
 
     this->serialProcess_.state = STATE_WAIT_SYNC;
