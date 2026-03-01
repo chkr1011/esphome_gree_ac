@@ -199,8 +199,12 @@ void GreeACCNT::transmit_packet(const uint8_t *packet, size_t length)
 {
     this->last_packet_sent_ = millis();
     this->last_packet_duration_ms_ = (length * 11000) / 4800;
-    write_array(packet, length);
-    log_packet(packet, length, true);
+    if (this->enable_tx_switch_ == nullptr || this->enable_tx_switch_->state) {
+        write_array(packet, length);
+        log_packet(packet, length, true);
+    } else {
+        ESP_LOGV(TAG, "TX inhibited by enable_tx switch: %s", format_hex_pretty(packet, length).c_str());
+    }
     yield();
 }
 
@@ -683,8 +687,19 @@ bool GreeACCNT::processUnitReport()
     }
 
     const char* display = determine_display();
-    if (this->display_state_.empty() || display == display_options::ACT || this->mode != climate::CLIMATE_MODE_OFF) {
+    if (this->mode != climate::CLIMATE_MODE_OFF) {
+        if (modeChanged && this->display_state_ == display_options::ACT) {
+            // Unit just turned ON and we want Actual temperature.
+            // Force an update to re-apply the setting.
+            this->update_ = ACUpdate::UpdateStart;
+        }
         hasChanged |= this->update_display(display);
+    } else {
+        // When OFF, AC unit always reports "Set temperature".
+        // We only follow it if it's "Actual" (unlikely when OFF) or if we don't have a state yet.
+        if (this->display_state_.empty() || strcmp(display, display_options::ACT) == 0) {
+            hasChanged |= this->update_display(display);
+        }
     }
 
     bool light_reported = determine_light();
@@ -863,6 +878,7 @@ const char* GreeACCNT::determine_display()
             ESP_LOGW(TAG, "Outside temperature display mode is not supported and was requested by the unit. Falling back to Set temperature.");
             return display_options::SET;
         default:
+            ESP_LOGW(TAG, "Received unknown display mode: %d. Falling back to Set temperature.", mode);
             return display_options::SET;
     }
 }

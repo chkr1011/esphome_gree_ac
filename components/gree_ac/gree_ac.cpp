@@ -48,6 +48,10 @@ void GreeAC::setup()
         this->light_select_->publish_state(this->light_mode_);
     }
 
+    if (this->enable_tx_switch_ != nullptr) {
+        this->enable_tx_switch_->publish_state(true);
+    }
+
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
     this->serialProcess_.size = 0;
@@ -470,6 +474,11 @@ void GreeAC::set_ifeel_switch(switch_::Switch *ifeel_switch)
             return;
         this->on_ifeel_change(state);
     });
+}
+
+void GreeAC::set_enable_tx_switch(switch_::Switch *enable_tx_switch)
+{
+    this->enable_tx_switch_ = enable_tx_switch;
 }
 
 void GreeAC::set_quiet_select(select::Select *quiet_select)
