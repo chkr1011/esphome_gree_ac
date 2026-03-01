@@ -189,7 +189,7 @@ async def to_code(config):
         (CONF_POWERSAVE_SWITCH, "Powersave", "set_powersave_switch", "mdi:leaf"),
         (CONF_TURBO_SWITCH, "Turbo", "set_turbo_switch", "mdi:car-turbocharger"),
         (CONF_IFEEL_SWITCH, "I-Feel", "set_ifeel_switch", "mdi:information-variant"),
-        (CONF_ENABLE_TX_SWITCH, "Enable TX", "set_enable_tx_switch", "mdi:transmission-tower"),
+        (CONF_ENABLE_TX_SWITCH, "Enable TX", "set_enable_tx_switch", "mdi:email-arrow-right"),
     ]
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
