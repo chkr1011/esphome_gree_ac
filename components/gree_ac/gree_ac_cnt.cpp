@@ -203,7 +203,9 @@ void GreeACCNT::transmit_packet(const uint8_t *packet, size_t length)
         write_array(packet, length);
         log_packet(packet, length, true);
     } else {
-        ESP_LOGV(TAG, "TX inhibited by enable_tx switch: %s", format_hex_pretty(packet, length).c_str());
+        if (this->dump_packets_switch_ == nullptr || this->dump_packets_switch_->state) {
+            ESP_LOGD(TAG, "TX inhibited by enable_tx switch: %s", format_hex_pretty(packet, length).c_str());
+        }
     }
     yield();
 }

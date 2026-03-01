@@ -52,6 +52,10 @@ void GreeAC::setup()
         this->enable_tx_switch_->publish_state(true);
     }
 
+    if (this->dump_packets_switch_ != nullptr) {
+        this->dump_packets_switch_->publish_state(true);
+    }
+
     this->serialProcess_.state = STATE_WAIT_SYNC;
     this->serialProcess_.last_byte_time = millis();
     this->serialProcess_.size = 0;
@@ -481,6 +485,11 @@ void GreeAC::set_enable_tx_switch(switch_::Switch *enable_tx_switch)
     this->enable_tx_switch_ = enable_tx_switch;
 }
 
+void GreeAC::set_dump_packets_switch(switch_::Switch *dump_packets_switch)
+{
+    this->dump_packets_switch_ = dump_packets_switch;
+}
+
 void GreeAC::set_quiet_select(select::Select *quiet_select)
 {
     this->quiet_select_ = quiet_select;
@@ -498,11 +507,15 @@ void GreeAC::set_quiet_select(select::Select *quiet_select)
 
 void GreeAC::log_packet(const uint8_t *data, size_t len, bool outgoing)
 {
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
+    if (this->dump_packets_switch_ != nullptr && !this->dump_packets_switch_->state) {
+        return;
+    }
+
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_DEBUG
     if (outgoing) {
-        ESP_LOGV(TAG, "TX: %s", format_hex_pretty(data, len).c_str());
+        ESP_LOGD(TAG, "TX: %s", format_hex_pretty(data, len).c_str());
     } else {
-        ESP_LOGV(TAG, "RX: %s", format_hex_pretty(data, len).c_str());
+        ESP_LOGD(TAG, "RX: %s", format_hex_pretty(data, len).c_str());
     }
 #endif
 }

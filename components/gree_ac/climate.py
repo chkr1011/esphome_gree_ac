@@ -42,6 +42,7 @@ CONF_POWERSAVE_SWITCH           = "powersave_switch"
 CONF_TURBO_SWITCH               = "turbo_switch"
 CONF_IFEEL_SWITCH               = "ifeel_switch"
 CONF_ENABLE_TX_SWITCH           = "enable_tx_switch"
+CONF_DUMP_PACKETS_SWITCH        = "dump_packets_switch"
 
 CONF_QUIET_SELECT               = "quiet_select"
 
@@ -109,6 +110,7 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_TURBO_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_IFEEL_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_ENABLE_TX_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_DUMP_PACKETS_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_QUIET_SELECT): cv.declare_id(GreeACSelect),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
@@ -190,6 +192,7 @@ async def to_code(config):
         (CONF_TURBO_SWITCH, "Turbo", "set_turbo_switch", "mdi:car-turbocharger"),
         (CONF_IFEEL_SWITCH, "I-Feel", "set_ifeel_switch", "mdi:information-variant"),
         (CONF_ENABLE_TX_SWITCH, "Enable TX", "set_enable_tx_switch", "mdi:email-arrow-right"),
+        (CONF_DUMP_PACKETS_SWITCH, "Dump packets", "set_dump_packets_switch", "mdi:details"),
     ]
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
@@ -198,7 +201,7 @@ async def to_code(config):
             CONF_NAME: name,
             CONF_ICON: icon,
         }
-        if conf_key == CONF_ENABLE_TX_SWITCH:
+        if conf_key in [CONF_ENABLE_TX_SWITCH, CONF_DUMP_PACKETS_SWITCH]:
             sw_conf[CONF_ENTITY_CATEGORY] = ENTITY_CATEGORY_DIAGNOSTIC
 
         sw_conf = switch.switch_schema(GreeACSwitch)(sw_conf)
