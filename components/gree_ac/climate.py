@@ -193,11 +193,15 @@ async def to_code(config):
     ]
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
-        sw_conf = switch.switch_schema(GreeACSwitch)(
-            {CONF_ID: sw_id, CONF_NAME: name, CONF_ICON: icon}
-        )
+        sw_conf = {
+            CONF_ID: sw_id,
+            CONF_NAME: name,
+            CONF_ICON: icon,
+        }
         if conf_key == CONF_ENABLE_TX_SWITCH:
             sw_conf[CONF_ENTITY_CATEGORY] = ENTITY_CATEGORY_DIAGNOSTIC
+
+        sw_conf = switch.switch_schema(GreeACSwitch)(sw_conf)
         sw_var = await switch.new_switch(sw_conf)
         await cg.register_component(sw_var, sw_conf)
         cg.add(getattr(var, setter)(sw_var))
