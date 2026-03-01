@@ -106,6 +106,8 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         void set_powersave_switch(switch_::Switch *powersave_switch);
         void set_turbo_switch(switch_::Switch *turbo_switch);
         void set_ifeel_switch(switch_::Switch *ifeel_switch);
+        void set_enable_tx_switch(switch_::Switch *enable_tx_switch);
+        void set_dump_packets_switch(switch_::Switch *dump_packets_switch);
 
         void set_quiet_select(select::Select *quiet_select);
 
@@ -128,6 +130,8 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         switch_::Switch *powersave_switch_       = nullptr; /* Switch for powersave */
         switch_::Switch *turbo_switch_           = nullptr; /* Switch for turbo */
         switch_::Switch *ifeel_switch_           = nullptr; /* Switch for I-Feel */
+        switch_::Switch *enable_tx_switch_      = nullptr; /* Switch for enabling TX */
+        switch_::Switch *dump_packets_switch_   = nullptr; /* Switch for dumping packets */
 
         select::Select *quiet_select_            = nullptr; /* Select for quiet mode */
 

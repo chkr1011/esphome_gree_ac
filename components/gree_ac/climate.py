@@ -3,6 +3,8 @@ from esphome.const import (
     CONF_ID,
     CONF_NAME,
     CONF_ICON,
+    CONF_ENTITY_CATEGORY,
+    ENTITY_CATEGORY_DIAGNOSTIC,
 )
 import esphome.codegen as cg
 import esphome.config_validation as cv
@@ -39,6 +41,8 @@ CONF_XFAN_SWITCH                = "xfan_switch"
 CONF_POWERSAVE_SWITCH           = "powersave_switch"
 CONF_TURBO_SWITCH               = "turbo_switch"
 CONF_IFEEL_SWITCH               = "ifeel_switch"
+CONF_ENABLE_TX_SWITCH           = "enable_tx_switch"
+CONF_DUMP_PACKETS_SWITCH        = "dump_packets_switch"
 
 CONF_QUIET_SELECT               = "quiet_select"
 
@@ -105,6 +109,8 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_POWERSAVE_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_TURBO_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_IFEEL_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_ENABLE_TX_SWITCH): cv.declare_id(GreeACSwitch),
+        cv.GenerateID(CONF_DUMP_PACKETS_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_QUIET_SELECT): cv.declare_id(GreeACSelect),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
@@ -185,12 +191,20 @@ async def to_code(config):
         (CONF_POWERSAVE_SWITCH, "Powersave", "set_powersave_switch", "mdi:leaf"),
         (CONF_TURBO_SWITCH, "Turbo", "set_turbo_switch", "mdi:car-turbocharger"),
         (CONF_IFEEL_SWITCH, "I-Feel", "set_ifeel_switch", "mdi:information-variant"),
+        (CONF_ENABLE_TX_SWITCH, "Enable TX", "set_enable_tx_switch", "mdi:email-arrow-right"),
+        (CONF_DUMP_PACKETS_SWITCH, "Dump packets", "set_dump_packets_switch", "mdi:details"),
     ]
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
-        sw_conf = switch.switch_schema(GreeACSwitch)(
-            {CONF_ID: sw_id, CONF_NAME: name, CONF_ICON: icon}
-        )
+        sw_conf = {
+            CONF_ID: sw_id,
+            CONF_NAME: name,
+            CONF_ICON: icon,
+        }
+        if conf_key in [CONF_ENABLE_TX_SWITCH, CONF_DUMP_PACKETS_SWITCH]:
+            sw_conf[CONF_ENTITY_CATEGORY] = ENTITY_CATEGORY_DIAGNOSTIC
+
+        sw_conf = switch.switch_schema(GreeACSwitch)(sw_conf)
         sw_var = await switch.new_switch(sw_conf)
         await cg.register_component(sw_var, sw_conf)
         cg.add(getattr(var, setter)(sw_var))
