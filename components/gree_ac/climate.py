@@ -3,6 +3,8 @@ from esphome.const import (
     CONF_ID,
     CONF_NAME,
     CONF_ICON,
+    CONF_ENTITY_CATEGORY,
+    ENTITY_CATEGORY_DIAGNOSTIC,
 )
 import esphome.codegen as cg
 import esphome.config_validation as cv
@@ -195,7 +197,7 @@ async def to_code(config):
             {CONF_ID: sw_id, CONF_NAME: name, CONF_ICON: icon}
         )
         if conf_key == CONF_ENABLE_TX_SWITCH:
-            sw_conf[cg.CONF_ENTITY_CATEGORY] = cg.ENTITY_CATEGORY_DIAGNOSTIC
+            sw_conf[CONF_ENTITY_CATEGORY] = ENTITY_CATEGORY_DIAGNOSTIC
         sw_var = await switch.new_switch(sw_conf)
         await cg.register_component(sw_var, sw_conf)
         cg.add(getattr(var, setter)(sw_var))
