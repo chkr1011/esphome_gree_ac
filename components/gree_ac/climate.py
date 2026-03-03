@@ -218,5 +218,4 @@ async def to_code(config):
         icon="mdi:information-outline",
     )({CONF_ID: ts_id, CONF_NAME: "Model ID"})
     ts_var = await text_sensor.new_text_sensor(ts_conf)
-    await cg.register_component(ts_var, ts_conf)
     cg.add(var.set_model_id_text_sensor(ts_var))
