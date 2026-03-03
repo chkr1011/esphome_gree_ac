@@ -216,7 +216,7 @@ async def to_code(config):
     ts_conf = text_sensor.text_sensor_schema(
         entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
         icon="mdi:information-outline",
-    ).validate({CONF_ID: ts_id, CONF_NAME: "Model ID"})
+    )({CONF_ID: ts_id, CONF_NAME: "Model ID"})
     ts_var = await text_sensor.new_text_sensor(ts_conf)
     await cg.register_component(ts_var, ts_conf)
     cg.add(var.set_model_id_text_sensor(ts_var))
