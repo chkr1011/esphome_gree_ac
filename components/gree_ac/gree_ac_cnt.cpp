@@ -3,6 +3,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 #include <cstring>
+#include <cstdio>
 
 namespace esphome {
 namespace gree_ac {
@@ -10,7 +11,7 @@ namespace CNT {
 
 static const char *const TAG = "gree_ac.serial";
 
-static const uint8_t ALLOWED_PACKETS[] = {protocol::CMD_IN_UNIT_REPORT};
+static const uint8_t ALLOWED_PACKETS[] = {protocol::CMD_IN_UNIT_REPORT, protocol::CMD_IN_MODEL_ID};
 
 void GreeACCNT::setup()
 {
@@ -634,7 +635,25 @@ void GreeACCNT::handle_packet()
             reqmodechange = false;
         }
     }
-    else 
+    else if (this->serialProcess_.data[3] == protocol::CMD_IN_MODEL_ID)
+    {
+        if (this->serialProcess_.size < 7) {
+            ESP_LOGW(TAG, "Model ID packet too short");
+            return;
+        }
+        uint8_t b1 = this->serialProcess_.data[4];
+        uint8_t b2 = this->serialProcess_.data[5];
+        uint8_t b3 = this->serialProcess_.data[6];
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d%02d%02d", b1, b2, b3);
+        std::string model_id = buf;
+
+        if (this->model_id_text_sensor_ != nullptr && this->model_id_text_sensor_->state != model_id) {
+            this->model_id_text_sensor_->publish_state(model_id);
+        }
+    }
+    else
     {
         ESP_LOGD(TAG, "Received unknown packet type: 0x%02X", this->serialProcess_.data[3]);
     }

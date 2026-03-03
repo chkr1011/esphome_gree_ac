@@ -22,3 +22,5 @@ external_components:
 climate:
   - platform: gree_ac
     name: "Test AC"
+    model_id_text_sensor:
+      name: "Model ID"
