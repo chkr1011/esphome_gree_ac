@@ -213,14 +213,12 @@ async def to_code(config):
         cg.add(getattr(var, setter)(sw_var))
 
     ts_id = config[CONF_MODEL_ID_TEXT_SENSOR]
-    ts_conf = text_sensor.text_sensor_schema(
-        {
-            CONF_ID: ts_id,
-            CONF_NAME: "Model ID",
-            CONF_ICON: "mdi:information-outline",
-            CONF_ENTITY_CATEGORY: ENTITY_CATEGORY_DIAGNOSTIC,
-        }
-    )
+    ts_conf = {
+        CONF_ID: ts_id,
+        CONF_NAME: "Model ID",
+        CONF_ICON: "mdi:information-outline",
+        CONF_ENTITY_CATEGORY: ENTITY_CATEGORY_DIAGNOSTIC,
+    }
     ts_var = await text_sensor.new_text_sensor(ts_conf)
     await cg.register_component(ts_var, ts_conf)
     cg.add(var.set_model_id_text_sensor(ts_var))
