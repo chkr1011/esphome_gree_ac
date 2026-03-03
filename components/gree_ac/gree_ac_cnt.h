@@ -1,4 +1,6 @@
 // based on: https://github.com/DomiStyle/esphome-panasonic-ac
+#pragma once
+
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/climate/climate_mode.h"
 #include "gree_ac.h"
@@ -54,8 +56,6 @@ namespace protocol {
     static const uint8_t REPORT_FAN_QUIET_AUTO_MASK = 0b00000100;
     static const uint8_t REPORT_FAN_TURBO_BYTE = 6;
     static const uint8_t REPORT_FAN_TURBO_MASK = 0b00000001;
-
-    static const uint8_t REPORT_FAN_MODE_MASK = 0b00000111;
 
     static const uint8_t REPORT_TEMP_SET_BYTE  = 5;
     static const uint8_t REPORT_TEMP_SET_MASK  = 0b11110000;
