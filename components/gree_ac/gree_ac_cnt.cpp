@@ -3,6 +3,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/util.h"
 #include <cstring>
+#include <cstdio>
 
 namespace esphome {
 namespace gree_ac {
@@ -10,7 +11,7 @@ namespace CNT {
 
 static const char *const TAG = "gree_ac.serial";
 
-static const uint8_t ALLOWED_PACKETS[] = {protocol::CMD_IN_UNIT_REPORT};
+static const uint8_t ALLOWED_PACKETS[] = {protocol::CMD_IN_UNIT_REPORT, protocol::CMD_IN_MODEL_ID};
 
 void GreeACCNT::setup()
 {
@@ -53,10 +54,7 @@ void GreeACCNT::loop()
                 Component::status_clear_error();
             }
 
-            if (this->update_ == ACUpdate::NoUpdate)
-            {
-                handle_packet(); /* this will update state of components in HA as well as internal settings */
-            }
+            handle_packet(); /* this will update state of components in HA as well as internal settings */
             yield();
         }
 
@@ -619,6 +617,10 @@ void GreeACCNT::handle_packet()
 {
     if (this->serialProcess_.data[3] == protocol::CMD_IN_UNIT_REPORT)
     {
+        if (this->update_ != ACUpdate::NoUpdate) {
+            return;
+        }
+
         /* Move payload to front of data array to simplify indexing (remove 4 byte header) */
         size_t payload_size = this->serialProcess_.size - 5;
         memmove(this->serialProcess_.data, &this->serialProcess_.data[4], payload_size);
@@ -634,7 +636,27 @@ void GreeACCNT::handle_packet()
             reqmodechange = false;
         }
     }
-    else 
+    else if (this->serialProcess_.data[3] == protocol::CMD_IN_MODEL_ID)
+    {
+        if (this->serialProcess_.size < 7) {
+            ESP_LOGW(TAG, "Model ID packet too short");
+            return;
+        }
+        uint8_t b1 = this->serialProcess_.data[4];
+        uint8_t b2 = this->serialProcess_.data[5];
+        uint8_t b3 = this->serialProcess_.data[6];
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d%02d%02d", b1, b2, b3);
+        std::string model_id = buf;
+
+        ESP_LOGI(TAG, "Received Model ID: %s", model_id.c_str());
+
+        if (this->model_id_text_sensor_ != nullptr && this->model_id_text_sensor_->state != model_id) {
+            this->model_id_text_sensor_->publish_state(model_id);
+        }
+    }
+    else
     {
         ESP_LOGD(TAG, "Received unknown packet type: 0x%02X", this->serialProcess_.data[3]);
     }

@@ -501,6 +501,11 @@ void GreeAC::set_quiet_select(select::Select *quiet_select)
     });
 }
 
+void GreeAC::set_model_id_text_sensor(text_sensor::TextSensor *model_id_text_sensor)
+{
+    this->model_id_text_sensor_ = model_id_text_sensor;
+}
+
 /*
  * Debugging
  */

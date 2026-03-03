@@ -8,9 +8,9 @@ from esphome.const import (
 )
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import uart, climate, sensor, select, switch
+from esphome.components import uart, climate, sensor, select, switch, text_sensor
 
-AUTO_LOAD = ["switch", "sensor", "select"]
+AUTO_LOAD = ["switch", "sensor", "select", "text_sensor"]
 DEPENDENCIES = ["uart"]
 
 gree_ac_ns = cg.esphome_ns.namespace("gree_ac")
@@ -45,6 +45,8 @@ CONF_ENABLE_TX_SWITCH           = "enable_tx_switch"
 CONF_DUMP_PACKETS_SWITCH        = "dump_packets_switch"
 
 CONF_QUIET_SELECT               = "quiet_select"
+
+CONF_MODEL_ID_TEXT_SENSOR       = "model_id_text_sensor"
 
 QUIET_OPTIONS = [
     "Off",
@@ -112,6 +114,7 @@ SCHEMA = climate.climate_schema(climate.Climate).extend(
         cv.GenerateID(CONF_ENABLE_TX_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_DUMP_PACKETS_SWITCH): cv.declare_id(GreeACSwitch),
         cv.GenerateID(CONF_QUIET_SELECT): cv.declare_id(GreeACSelect),
+        cv.GenerateID(CONF_MODEL_ID_TEXT_SENSOR): cv.declare_id(text_sensor.TextSensor),
     }
 ).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -209,3 +212,15 @@ async def to_code(config):
         await cg.register_component(sw_var, sw_conf)
         cg.add(getattr(var, setter)(sw_var))
 
+    ts_id = config[CONF_MODEL_ID_TEXT_SENSOR]
+    ts_conf = text_sensor.text_sensor_schema(
+        {
+            CONF_ID: ts_id,
+            CONF_NAME: "Model ID",
+            CONF_ICON: "mdi:information-outline",
+            CONF_ENTITY_CATEGORY: ENTITY_CATEGORY_DIAGNOSTIC,
+        }
+    )
+    ts_var = await text_sensor.new_text_sensor(ts_conf)
+    await cg.register_component(ts_var, ts_conf)
+    cg.add(var.set_model_id_text_sensor(ts_var))
