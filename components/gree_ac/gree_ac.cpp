@@ -526,11 +526,14 @@ void GreeAC::log_packet(const uint8_t *data, size_t len, bool outgoing)
     }
 
 #if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_DEBUG
+    const char *prefix = "";
     if (outgoing) {
-        ESP_LOGD(TAG, "TX: %s", format_hex_pretty(data, len).c_str());
+        bool tx_enabled = (this->enable_tx_switch_ == nullptr || this->enable_tx_switch_->state);
+        prefix = tx_enabled ? " TX :" : "(TX):";
     } else {
-        ESP_LOGD(TAG, "RX: %s", format_hex_pretty(data, len).c_str());
+        prefix = " RX :";
     }
+    ESP_LOGD(TAG, "%s %s", prefix, format_hex_pretty(data, len).c_str());
 #endif
 }
 

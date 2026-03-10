@@ -202,10 +202,6 @@ void GreeACCNT::transmit_packet(const uint8_t *packet, size_t length)
 
     if (this->enable_tx_switch_ == nullptr || this->enable_tx_switch_->state) {
         write_array(packet, length);
-    } else {
-        if (this->dump_packets_switch_ == nullptr || this->dump_packets_switch_->state) {
-            ESP_LOGD(TAG, "TX inhibited by enable_tx switch");
-        }
     }
     yield();
 }
