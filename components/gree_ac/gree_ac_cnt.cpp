@@ -197,13 +197,11 @@ void GreeACCNT::transmit_packet(const uint8_t *packet, size_t length)
 {
     this->last_packet_sent_ = millis();
     this->last_packet_duration_ms_ = (length * 11000) / 4800;
+
+    log_packet(packet, length, true);
+
     if (this->enable_tx_switch_ == nullptr || this->enable_tx_switch_->state) {
         write_array(packet, length);
-        log_packet(packet, length, true);
-    } else {
-        if (this->dump_packets_switch_ == nullptr || this->dump_packets_switch_->state) {
-            ESP_LOGD(TAG, "TX inhibited by enable_tx switch: %s", format_hex_pretty(packet, length).c_str());
-        }
     }
     yield();
 }
