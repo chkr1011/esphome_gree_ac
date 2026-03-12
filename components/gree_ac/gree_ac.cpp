@@ -170,10 +170,10 @@ bool GreeAC::update_fan_mode(const std::string &fan_mode)
         return false;
     }
 
-    if (this->fan_mode == new_fan_mode && !this->custom_fan_mode_.has_value())
+    if (this->fan_mode == new_fan_mode && this->get_custom_fan_mode().empty())
         return false;
 
-    this->custom_fan_mode_.reset();
+    this->set_custom_fan_mode_("");
     this->fan_mode = new_fan_mode;
     return true;
 }
