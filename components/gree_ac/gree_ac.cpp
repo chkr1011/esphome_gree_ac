@@ -29,11 +29,10 @@ climate::ClimateTraits GreeAC::traits()
     traits.set_supported_modes({climate::CLIMATE_MODE_OFF, climate::CLIMATE_MODE_AUTO, climate::CLIMATE_MODE_COOL,
                                 climate::CLIMATE_MODE_HEAT, climate::CLIMATE_MODE_FAN_ONLY, climate::CLIMATE_MODE_DRY});
 
-    traits.set_supported_fan_modes({climate::CLIMATE_FAN_AUTO});
+    traits.set_supported_fan_modes({climate::CLIMATE_FAN_AUTO, climate::CLIMATE_FAN_LOW,
+                                    climate::CLIMATE_FAN_MEDIUM, climate::CLIMATE_FAN_HIGH});
 
-    traits.set_supported_custom_fan_modes({fan_modes::FAN_MIN, fan_modes::FAN_LOW,
-                                           fan_modes::FAN_MED, fan_modes::FAN_HIGH,
-                                           fan_modes::FAN_MAX});
+    traits.set_supported_custom_fan_modes({fan_modes::FAN_MIN, fan_modes::FAN_MAX});
 
     return traits;
 }
@@ -149,19 +148,33 @@ bool GreeAC::update_target_temperature(float temperature)
 
 bool GreeAC::update_fan_mode(const std::string &fan_mode)
 {
-    if (fan_mode == fan_modes::FAN_AUTO) {
-        if (this->fan_mode == climate::CLIMATE_FAN_AUTO && this->get_custom_fan_mode().empty())
+    if (fan_mode == fan_modes::FAN_MIN || fan_mode == fan_modes::FAN_MAX) {
+        if (this->get_custom_fan_mode() == fan_mode)
             return false;
-        this->set_custom_fan_mode_("");
-        this->fan_mode = climate::CLIMATE_FAN_AUTO;
+        this->fan_mode.reset();
+        this->set_custom_fan_mode_(fan_mode.c_str());
         return true;
     }
 
-    if (this->get_custom_fan_mode() == fan_mode)
+    climate::ClimateFanMode new_fan_mode;
+    if (fan_mode == fan_modes::FAN_AUTO) {
+        new_fan_mode = climate::CLIMATE_FAN_AUTO;
+    } else if (fan_mode == fan_modes::FAN_LOW) {
+        new_fan_mode = climate::CLIMATE_FAN_LOW;
+    } else if (fan_mode == fan_modes::FAN_MED) {
+        new_fan_mode = climate::CLIMATE_FAN_MEDIUM;
+    } else if (fan_mode == fan_modes::FAN_HIGH) {
+        new_fan_mode = climate::CLIMATE_FAN_HIGH;
+    } else {
+        ESP_LOGW(TAG, "Unknown fan mode: %s", fan_mode.c_str());
+        return false;
+    }
+
+    if (this->fan_mode == new_fan_mode && this->get_custom_fan_mode().empty())
         return false;
 
-    this->fan_mode.reset();
-    this->set_custom_fan_mode_(fan_mode.c_str());
+    this->set_custom_fan_mode_("");
+    this->fan_mode = new_fan_mode;
     return true;
 }
 

@@ -152,15 +152,7 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         ESP_LOGV(TAG, "Requested fan mode change");
         this->mark_for_update_();
         this->fan_mode = *call.get_fan_mode();
-
-        if (this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-            this->set_custom_fan_mode_("");
-        } else {
-            /* If HA sent a standard fan mode (Low/Med/High) which we now treat as custom,
-               we map it to custom here if needed, but since we updated traits,
-               HA should only be sending Auto as standard and others as custom.
-               Just in case, we clear custom if Auto is requested. */
-        }
+        this->set_custom_fan_mode_("");
 
         /* Requirement 3: When the fan mode gets changed while turbo is on, the turbo mode must be deactivated.
            Also for quiet mode. */
@@ -346,9 +338,27 @@ void GreeACCNT::send_params_set_packet()
     uint8_t fan_mode_payload4 = 0x00;
     uint8_t fan_mode_payload18 = 0x00;
 
-    if (this->fan_mode.has_value() && *this->fan_mode == climate::CLIMATE_FAN_AUTO) {
-        fan_mode_payload4 = 0x00;
-        fan_mode_payload18 = 0x00;
+    if (this->fan_mode.has_value()) {
+        switch (*this->fan_mode) {
+            case climate::CLIMATE_FAN_AUTO:
+                fan_mode_payload4 = 0x00;
+                fan_mode_payload18 = 0x00;
+                break;
+            case climate::CLIMATE_FAN_LOW:
+                fan_mode_payload4 = 0x02;
+                fan_mode_payload18 = 0x02;
+                break;
+            case climate::CLIMATE_FAN_MEDIUM:
+                fan_mode_payload4 = 0x02;
+                fan_mode_payload18 = 0x03;
+                break;
+            case climate::CLIMATE_FAN_HIGH:
+                fan_mode_payload4 = 0x03;
+                fan_mode_payload18 = 0x04;
+                break;
+            default:
+                break;
+        }
     }
 
     if (this->has_custom_fan_mode()) {
@@ -357,15 +367,6 @@ void GreeACCNT::send_params_set_packet()
         if (custom_fan_mode == fan_modes::FAN_MIN) {
             fan_mode_payload4 = 0x01;
             fan_mode_payload18 = 0x01;
-        } else if (custom_fan_mode == fan_modes::FAN_LOW) {
-            fan_mode_payload4 = 0x02;
-            fan_mode_payload18 = 0x02;
-        } else if (custom_fan_mode == fan_modes::FAN_MED) {
-            fan_mode_payload4 = 0x02;
-            fan_mode_payload18 = 0x03;
-        } else if (custom_fan_mode == fan_modes::FAN_HIGH) {
-            fan_mode_payload4 = 0x03;
-            fan_mode_payload18 = 0x04;
         } else if (custom_fan_mode == fan_modes::FAN_MAX) {
             fan_mode_payload4 = 0x03;
             fan_mode_payload18 = 0x05;
