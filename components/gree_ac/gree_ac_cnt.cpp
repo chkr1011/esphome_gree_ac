@@ -926,6 +926,8 @@ const char* GreeACCNT::determine_display()
     uint8_t mode = (this->serialProcess_.data[protocol::REPORT_DISP_MODE_BYTE] & protocol::REPORT_DISP_MODE_MASK) >> protocol::REPORT_DISP_MODE_POS;
 
     switch (mode) {
+        case protocol::REPORT_DISP_MODE_AUTO:
+            return display_options::SET;
         case protocol::REPORT_DISP_MODE_SET:
             return display_options::SET;
         case protocol::REPORT_DISP_MODE_ACT:
