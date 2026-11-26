@@ -128,7 +128,7 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         this->mark_for_update_();
         this->mode = *call.get_mode();
 
-        if (this->light_mode_ == light_options::AUTO)
+        if (this->light_mode_ == LightMode::AUTO)
         {
             this->light_state_ = (this->mode != climate::CLIMATE_MODE_OFF);
         }
@@ -159,7 +159,7 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         /* Requirement 3: When the fan mode gets changed while turbo is on, the turbo mode must be deactivated.
            Also for quiet mode. */
         this->update_turbo(false);
-        this->update_quiet(quiet_options::OFF);
+        this->update_quiet(QuietMode::OFF);
     }
 
     if (call.has_custom_fan_mode())
@@ -172,7 +172,7 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         /* Requirement 3: When the fan mode gets changed while turbo is on, the turbo mode must be deactivated.
            Also for quiet mode. */
         this->update_turbo(false);
-        this->update_quiet(quiet_options::OFF);
+        this->update_quiet(QuietMode::OFF);
     }
 
     if (call.get_swing_mode().has_value())
@@ -181,29 +181,29 @@ void GreeACCNT::control(const climate::ClimateCall &call)
         this->mark_for_update_();
         switch (*call.get_swing_mode()) {
             case climate::CLIMATE_SWING_BOTH:
-                this->vertical_swing_state_   =   vertical_swing_options::FULL;
-                this->horizontal_swing_state_ = horizontal_swing_options::FULL;
+                this->vertical_swing_state_   = VerticalSwing::FULL;
+                this->horizontal_swing_state_ = HorizontalSwing::FULL;
                 break;
             case climate::CLIMATE_SWING_OFF:
                 /* both center */
-                this->vertical_swing_state_   =   vertical_swing_options::CMID;
-                this->horizontal_swing_state_ = horizontal_swing_options::CMID;
+                this->vertical_swing_state_   = VerticalSwing::CMID;
+                this->horizontal_swing_state_ = HorizontalSwing::CMID;
                 break;
             case climate::CLIMATE_SWING_VERTICAL:
                 /* vertical full, horizontal center */
-                this->vertical_swing_state_   =   vertical_swing_options::FULL;
-                this->horizontal_swing_state_ = horizontal_swing_options::CMID;
+                this->vertical_swing_state_   = VerticalSwing::FULL;
+                this->horizontal_swing_state_ = HorizontalSwing::CMID;
                 break;
             case climate::CLIMATE_SWING_HORIZONTAL:
                 /* horizontal full, vertical center */
-                this->vertical_swing_state_   =   vertical_swing_options::CMID;
-                this->horizontal_swing_state_ = horizontal_swing_options::FULL;
+                this->vertical_swing_state_   = VerticalSwing::CMID;
+                this->horizontal_swing_state_ = HorizontalSwing::FULL;
                 break;
             default:
                 ESP_LOGV(TAG, "Unsupported swing mode requested");
                 /* both center */
-                this->vertical_swing_state_   =   vertical_swing_options::CMID;
-                this->horizontal_swing_state_ = horizontal_swing_options::CMID;
+                this->vertical_swing_state_   = VerticalSwing::CMID;
+                this->horizontal_swing_state_ = HorizontalSwing::CMID;
                 break;
         }
     }
@@ -253,9 +253,13 @@ void GreeACCNT::send_params_set_packet()
         }
     }
 
-    uint8_t payload[protocol::SET_PACKET_LEN];
-    memset(payload, 0, sizeof(payload));
-    
+    uint8_t full_packet[protocol::SET_PACKET_LEN + 5] = {};
+    full_packet[0] = protocol::SYNC;
+    full_packet[1] = protocol::SYNC;
+    full_packet[2] = protocol::SET_PACKET_LEN + 2;
+    full_packet[3] = protocol::CMD_OUT_PARAMS_SET;
+    uint8_t *payload = &full_packet[4];
+
     payload[protocol::SET_CONST_02_BYTE] = protocol::SET_CONST_02_VAL; /* Some always 0x02 byte... */
     payload[protocol::SET_CONST_BIT_BYTE] = protocol::SET_CONST_BIT_MASK; /* Some always true bit */
 
@@ -389,58 +393,46 @@ void GreeACCNT::send_params_set_packet()
     }
 
     // QUIET STATE
-    if (this->quiet_state_ == quiet_options::ON)
+    if (this->quiet_state_ == QuietMode::ON)
     {
         payload[protocol::REPORT_FAN_QUIET_BYTE] |= protocol::REPORT_FAN_QUIET_MASK;
     }
-    else if (this->quiet_state_ == quiet_options::AUTO)
+    else if (this->quiet_state_ == QuietMode::AUTO)
     {
         payload[protocol::REPORT_FAN_QUIET_BYTE] |= protocol::REPORT_FAN_QUIET_AUTO_MASK;
     }
 
     // VERTICAL SWING
-    static const struct { const char* const opt; uint8_t val; } VSWING_MAP[] = {
-        {vertical_swing_options::OFF,   protocol::REPORT_VSWING_OFF},
-        {vertical_swing_options::FULL,  protocol::REPORT_VSWING_FULL},
-        {vertical_swing_options::DOWN,  protocol::REPORT_VSWING_DOWN},
-        {vertical_swing_options::MIDD,  protocol::REPORT_VSWING_MIDD},
-        {vertical_swing_options::MID,   protocol::REPORT_VSWING_MID},
-        {vertical_swing_options::MIDU,  protocol::REPORT_VSWING_MIDU},
-        {vertical_swing_options::UP,    protocol::REPORT_VSWING_UP},
-        {vertical_swing_options::CDOWN, protocol::REPORT_VSWING_CDOWN},
-        {vertical_swing_options::CMIDD, protocol::REPORT_VSWING_CMIDD},
-        {vertical_swing_options::CMID,  protocol::REPORT_VSWING_CMID},
-        {vertical_swing_options::CMIDU, protocol::REPORT_VSWING_CMIDU},
-        {vertical_swing_options::CUP,   protocol::REPORT_VSWING_CUP},
-    };
-
     uint8_t mode_vertical_swing = protocol::REPORT_VSWING_OFF;
-    for (const auto& mapping : VSWING_MAP) {
-        if (this->vertical_swing_state_ == mapping.opt) {
-            mode_vertical_swing = mapping.val;
-            break;
-        }
+    switch (this->vertical_swing_state_) {
+        case VerticalSwing::OFF:   mode_vertical_swing = protocol::REPORT_VSWING_OFF;   break;
+        case VerticalSwing::FULL:  mode_vertical_swing = protocol::REPORT_VSWING_FULL;  break;
+        case VerticalSwing::DOWN:  mode_vertical_swing = protocol::REPORT_VSWING_DOWN;  break;
+        case VerticalSwing::MIDD:  mode_vertical_swing = protocol::REPORT_VSWING_MIDD;  break;
+        case VerticalSwing::MID:   mode_vertical_swing = protocol::REPORT_VSWING_MID;   break;
+        case VerticalSwing::MIDU:  mode_vertical_swing = protocol::REPORT_VSWING_MIDU;  break;
+        case VerticalSwing::UP:    mode_vertical_swing = protocol::REPORT_VSWING_UP;    break;
+        case VerticalSwing::CDOWN: mode_vertical_swing = protocol::REPORT_VSWING_CDOWN; break;
+        case VerticalSwing::CMIDD: mode_vertical_swing = protocol::REPORT_VSWING_CMIDD; break;
+        case VerticalSwing::CMID:  mode_vertical_swing = protocol::REPORT_VSWING_CMID;  break;
+        case VerticalSwing::CMIDU: mode_vertical_swing = protocol::REPORT_VSWING_CMIDU; break;
+        case VerticalSwing::CUP:   mode_vertical_swing = protocol::REPORT_VSWING_CUP;   break;
+        default: break;
     }
 
     payload[protocol::REPORT_VSWING_BYTE] |= (mode_vertical_swing << protocol::REPORT_VSWING_POS);
 
     // HORIZONTAL SWING
-    static const struct { const char* const opt; uint8_t val; } HSWING_MAP[] = {
-        {horizontal_swing_options::OFF,    protocol::REPORT_HSWING_OFF},
-        {horizontal_swing_options::FULL,   protocol::REPORT_HSWING_FULL},
-        {horizontal_swing_options::CLEFT,  protocol::REPORT_HSWING_CLEFT},
-        {horizontal_swing_options::CMIDL,  protocol::REPORT_HSWING_CMIDL},
-        {horizontal_swing_options::CMID,   protocol::REPORT_HSWING_CMID},
-        {horizontal_swing_options::CMIDR,  protocol::REPORT_HSWING_CMIDR},
-        {horizontal_swing_options::CRIGHT, protocol::REPORT_HSWING_CRIGHT},
-    };
-
     uint8_t mode_horizontal_swing = protocol::REPORT_HSWING_OFF;
-    for (const auto& mapping : HSWING_MAP) {
-        if (this->horizontal_swing_state_ == mapping.opt) {
-            mode_horizontal_swing = mapping.val;
-            break;
-        }
+    switch (this->horizontal_swing_state_) {
+        case HorizontalSwing::OFF:    mode_horizontal_swing = protocol::REPORT_HSWING_OFF;    break;
+        case HorizontalSwing::FULL:   mode_horizontal_swing = protocol::REPORT_HSWING_FULL;   break;
+        case HorizontalSwing::CLEFT:  mode_horizontal_swing = protocol::REPORT_HSWING_CLEFT;  break;
+        case HorizontalSwing::CMIDL:  mode_horizontal_swing = protocol::REPORT_HSWING_CMIDL;  break;
+        case HorizontalSwing::CMID:   mode_horizontal_swing = protocol::REPORT_HSWING_CMID;   break;
+        case HorizontalSwing::CMIDR:  mode_horizontal_swing = protocol::REPORT_HSWING_CMIDR;  break;
+        case HorizontalSwing::CRIGHT: mode_horizontal_swing = protocol::REPORT_HSWING_CRIGHT; break;
+        default: break;
     }
     payload[protocol::REPORT_HSWING_BYTE] |= (mode_horizontal_swing << protocol::REPORT_HSWING_POS);
 
@@ -448,11 +440,11 @@ void GreeACCNT::send_params_set_packet()
     uint8_t display_mode = protocol::REPORT_DISP_MODE_SET;
     if (this->mode != climate::CLIMATE_MODE_OFF)
     {
-        if (this->display_state_ == display_options::SET)
+        if (this->display_state_ == DisplayMode::SET)
         {
             display_mode = protocol::REPORT_DISP_MODE_SET;
         }
-        else if (this->display_state_ == display_options::ACT)
+        else if (this->display_state_ == DisplayMode::ACT)
         {
             display_mode = protocol::REPORT_DISP_MODE_ACT;
         }
@@ -471,7 +463,7 @@ void GreeACCNT::send_params_set_packet()
     }
 
     /* DISPLAY UNIT --------------------------------------------------------------------------- */
-    if (this->display_unit_state_ == display_unit_options::DEGF)
+    if (this->display_unit_state_ == DisplayUnit::DEGF)
     {
         payload[protocol::REPORT_DISP_F_BYTE] |= protocol::REPORT_DISP_F_MASK;
     }
@@ -512,15 +504,6 @@ void GreeACCNT::send_params_set_packet()
     {
         payload[protocol::REPORT_IFEEL_BYTE] |= protocol::REPORT_IFEEL_MASK;
     }
-
-    /* Do the command, length */
-
-    uint8_t full_packet[protocol::SET_PACKET_LEN + 5];
-    full_packet[0] = protocol::SYNC;
-    full_packet[1] = protocol::SYNC;
-    full_packet[2] = protocol::SET_PACKET_LEN + 2;
-    full_packet[3] = protocol::CMD_OUT_PARAMS_SET;
-    memcpy(&full_packet[4], payload, protocol::SET_PACKET_LEN);
 
     finalize_checksum_(full_packet, sizeof(full_packet));
 
@@ -651,13 +634,15 @@ void GreeACCNT::handle_packet()
             return;
         }
 
-        /* Move payload to front of data array to simplify indexing (remove 4 byte header) */
-        size_t payload_size = this->serialProcess_.size - 5;
-        memmove(this->serialProcess_.data, &this->serialProcess_.data[4], payload_size);
-        this->serialProcess_.size = payload_size;
+        if (this->serialProcess_.size < 5 + protocol::REPORT_TEMP_ACT_BYTE + 1) {
+            ESP_LOGW(TAG, "Unit report packet too short");
+            return;
+        }
+
+        const uint8_t *payload = &this->serialProcess_.data[4];
 
         /* now process the data */
-        bool hasChanged = this->processUnitReport();
+        bool hasChanged = this->processUnitReport(payload);
 
         if (hasChanged || reqmodechange)
         {
@@ -676,14 +661,18 @@ void GreeACCNT::handle_packet()
         uint8_t b2 = this->serialProcess_.data[5];
         uint8_t b3 = this->serialProcess_.data[6];
 
-        char buf[32];
-        snprintf(buf, sizeof(buf), "%d%02d%02d", b1, b2, b3);
-        std::string model_id = buf;
+        uint32_t raw_model_id = (static_cast<uint32_t>(b1) << 16) |
+                                (static_cast<uint32_t>(b2) << 8) |
+                                static_cast<uint32_t>(b3);
+        if (raw_model_id != this->model_id_raw_) {
+            this->model_id_raw_ = raw_model_id;
+            char buf[12];
+            snprintf(buf, sizeof(buf), "%u%02u%02u", b1, b2, b3);
+            ESP_LOGI(TAG, "Received Model ID: %s", buf);
 
-        ESP_LOGI(TAG, "Received Model ID: %s", model_id.c_str());
-
-        if (this->model_id_text_sensor_ != nullptr && this->model_id_text_sensor_->state != model_id) {
-            this->model_id_text_sensor_->publish_state(model_id);
+            if (this->model_id_text_sensor_ != nullptr) {
+                this->model_id_text_sensor_->publish_state(buf);
+            }
         }
     }
     else
@@ -695,18 +684,18 @@ void GreeACCNT::handle_packet()
 /*
  * This decodes frame recieved from AC Unit
  */
-bool GreeACCNT::processUnitReport()
+bool GreeACCNT::processUnitReport(const uint8_t *payload)
 {
     bool hasChanged = false;
     bool modeChanged = false;
 
-    climate::ClimateMode newMode = determine_mode();
+    climate::ClimateMode newMode = determine_mode(payload);
     if (this->mode != newMode) {
         this->mode = newMode;
         hasChanged = true;
         modeChanged = true;
 
-        if (this->light_mode_ == light_options::AUTO)
+        if (this->light_mode_ == LightMode::AUTO)
         {
             bool new_light_state = (this->mode != climate::CLIMATE_MODE_OFF);
             if (this->light_state_ != new_light_state) {
@@ -716,22 +705,22 @@ bool GreeACCNT::processUnitReport()
         }
     }
    
-    uint8_t temset = (this->serialProcess_.data[protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS;
+    uint8_t temset = (payload[protocol::REPORT_TEMP_SET_BYTE] & protocol::REPORT_TEMP_SET_MASK) >> protocol::REPORT_TEMP_SET_POS;
     hasChanged |= this->update_target_temperature((float)(temset + protocol::REPORT_TEMP_SET_OFF));
-    hasChanged |= this->update_current_temperature((float)(this->serialProcess_.data[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF));
+    hasChanged |= this->update_current_temperature((float)(payload[protocol::REPORT_TEMP_ACT_BYTE] - protocol::REPORT_TEMP_ACT_OFF));
 
-    const char* verticalSwing = determine_vertical_swing();
+    VerticalSwing verticalSwing = determine_vertical_swing(payload);
     hasChanged |= this->update_swing_vertical(verticalSwing);
 
-    const char* horizontalSwing = determine_horizontal_swing();
+    HorizontalSwing horizontalSwing = determine_horizontal_swing(payload);
     hasChanged |= this->update_swing_horizontal(horizontalSwing);
 
     climate::ClimateSwingMode newSwingMode;
-    if (strcmp(verticalSwing, vertical_swing_options::FULL) == 0 && strcmp(horizontalSwing, horizontal_swing_options::FULL) == 0)
+    if (verticalSwing == VerticalSwing::FULL && horizontalSwing == HorizontalSwing::FULL)
         newSwingMode = climate::CLIMATE_SWING_BOTH;
-    else if (strcmp(verticalSwing, vertical_swing_options::FULL) == 0)
+    else if (verticalSwing == VerticalSwing::FULL)
         newSwingMode = climate::CLIMATE_SWING_VERTICAL;
-    else if (strcmp(horizontalSwing, horizontal_swing_options::FULL) == 0)
+    else if (horizontalSwing == HorizontalSwing::FULL)
         newSwingMode = climate::CLIMATE_SWING_HORIZONTAL;
     else
         newSwingMode = climate::CLIMATE_SWING_OFF;
@@ -741,9 +730,9 @@ bool GreeACCNT::processUnitReport()
         hasChanged = true;
     }
 
-    const char* display = determine_display();
+    DisplayMode display = determine_display(payload);
     if (this->mode != climate::CLIMATE_MODE_OFF) {
-        if (modeChanged && this->display_state_ == display_options::ACT) {
+        if (modeChanged && this->display_state_ == DisplayMode::ACT) {
             // Unit just turned ON and we want Actual temperature.
             // Force an update to re-apply the setting.
             this->update_ = ACUpdate::UpdateStart;
@@ -752,14 +741,14 @@ bool GreeACCNT::processUnitReport()
     } else {
         // When OFF, AC unit always reports "Set temperature".
         // We only follow it if it's "Actual" (unlikely when OFF) or if we don't have a state yet.
-        if (this->display_state_.empty() || strcmp(display, display_options::ACT) == 0) {
+        if (this->display_state_ == DisplayMode::NONE || display == DisplayMode::ACT) {
             hasChanged |= this->update_display(display);
         }
     }
 
-    bool light_reported = determine_light();
-    if (this->light_state_ != light_reported || (this->light_select_ != nullptr && this->light_select_->current_option().empty())) {
-        if (this->light_mode_ == light_options::AUTO)
+    bool light_reported = determine_light(payload);
+    if (this->light_state_ != light_reported || (this->light_select_ != nullptr && !this->light_select_->active_index().has_value())) {
+        if (this->light_mode_ == LightMode::AUTO)
         {
             if (!modeChanged) {
                 // Remote override: AC power state did not change, but light status changed.
@@ -770,7 +759,7 @@ bool GreeACCNT::processUnitReport()
 
             hasChanged |= this->update_light(this->light_state_);
         }
-        else if (this->light_mode_ == light_options::OFF)
+        else if (this->light_mode_ == LightMode::OFF)
         {
             if (light_reported == true) {
                 // Enforce OFF: unit reported light ON, so we force it back to OFF.
@@ -780,7 +769,7 @@ bool GreeACCNT::processUnitReport()
                 hasChanged |= this->update_light(false);
             }
         }
-        else if (this->light_mode_ == light_options::ON)
+        else if (this->light_mode_ == LightMode::ON)
         {
             if (light_reported == false) {
                 // Enforce ON: unit reported light OFF, so we force it back to ON.
@@ -792,28 +781,28 @@ bool GreeACCNT::processUnitReport()
         }
     }
 
-    hasChanged |= this->update_display_unit(determine_display_unit());
-    hasChanged |= this->update_ionizer(determine_ionizer());
-    hasChanged |= this->update_beeper(determine_beeper());
-    hasChanged |= this->update_sleep(determine_sleep());
-    hasChanged |= this->update_xfan(determine_xfan());
-    hasChanged |= this->update_powersave(determine_powersave());
-    hasChanged |= this->update_turbo(determine_turbo());
-    hasChanged |= this->update_ifeel(determine_ifeel());
-    hasChanged |= this->update_quiet(determine_quiet());
-    hasChanged |= this->update_fan_mode(determine_fan_mode());
+    hasChanged |= this->update_display_unit(determine_display_unit(payload));
+    hasChanged |= this->update_ionizer(determine_ionizer(payload));
+    hasChanged |= this->update_beeper(determine_beeper(payload));
+    hasChanged |= this->update_sleep(determine_sleep(payload));
+    hasChanged |= this->update_xfan(determine_xfan(payload));
+    hasChanged |= this->update_powersave(determine_powersave(payload));
+    hasChanged |= this->update_turbo(determine_turbo(payload));
+    hasChanged |= this->update_ifeel(determine_ifeel(payload));
+    hasChanged |= this->update_quiet(determine_quiet(payload));
+    hasChanged |= this->update_fan_mode(determine_fan_mode(payload));
 
     return hasChanged;
 }
 
-climate::ClimateMode GreeACCNT::determine_mode()
+climate::ClimateMode GreeACCNT::determine_mode(const uint8_t *payload)
 {
-    uint8_t mode = (this->serialProcess_.data[protocol::REPORT_MODE_BYTE] & protocol::REPORT_MODE_MASK) >> protocol::REPORT_MODE_POS;
+    uint8_t mode = (payload[protocol::REPORT_MODE_BYTE] & protocol::REPORT_MODE_MASK) >> protocol::REPORT_MODE_POS;
 
     /* as mode presented by climate component incorporates both power and mode we will store this separately for Gree
        in _internal_ fields */
     /* check unit power flag */
-    this->power_internal_ = (this->serialProcess_.data[protocol::REPORT_PWR_BYTE] & protocol::REPORT_PWR_MASK) != 0;
+    this->power_internal_ = (payload[protocol::REPORT_PWR_BYTE] & protocol::REPORT_PWR_MASK) != 0;
 
     /* check unit mode */
     switch (mode)
@@ -850,152 +839,144 @@ climate::ClimateMode GreeACCNT::determine_mode()
     }
 }
 
-const char* GreeACCNT::determine_fan_mode()
+FanMode GreeACCNT::determine_fan_mode(const uint8_t *payload)
 {
     /* fan setting has quite complex representation in the packet, brace for it */
-    uint8_t fan_mode = (this->serialProcess_.data[protocol::REPORT_FAN_SPD1_BYTE] & protocol::REPORT_FAN_SPD1_MASK);
+    uint8_t fan_mode = (payload[protocol::REPORT_FAN_SPD1_BYTE] & protocol::REPORT_FAN_SPD1_MASK);
 
     switch (fan_mode) {
         case 0x01:
-            return fan_modes::FAN_MIN;
+            return FanMode::MIN;
         case 0x02:
-            return fan_modes::FAN_LOW;
+            return FanMode::LOW;
         case 0x03:
-            return fan_modes::FAN_MED;
+            return FanMode::MED;
         case 0x04:
-            return fan_modes::FAN_HIGH;
+            return FanMode::HIGH;
         case 0x05:
-            return fan_modes::FAN_MAX;
+            return FanMode::MAX;
         case 0x00:
-            return fan_modes::FAN_AUTO;
+            return FanMode::AUTO;
         default:
             ESP_LOGW(TAG, "Received unknown fan mode: %d", fan_mode);
-            return fan_modes::FAN_AUTO;
+            return FanMode::AUTO;
     }
 }
 
-const char* GreeACCNT::determine_vertical_swing()
+VerticalSwing GreeACCNT::determine_vertical_swing(const uint8_t *payload)
 {
-    uint8_t mode = (this->serialProcess_.data[protocol::REPORT_VSWING_BYTE]  & protocol::REPORT_VSWING_MASK) >> protocol::REPORT_VSWING_POS;
+    uint8_t mode = (payload[protocol::REPORT_VSWING_BYTE] & protocol::REPORT_VSWING_MASK) >> protocol::REPORT_VSWING_POS;
 
-    static const struct { uint8_t val; const char* const opt; } VSWING_MAP[] = {
-        {protocol::REPORT_VSWING_OFF,   vertical_swing_options::OFF},
-        {protocol::REPORT_VSWING_FULL,  vertical_swing_options::FULL},
-        {protocol::REPORT_VSWING_CUP,   vertical_swing_options::CUP},
-        {protocol::REPORT_VSWING_CMIDU, vertical_swing_options::CMIDU},
-        {protocol::REPORT_VSWING_CMID,  vertical_swing_options::CMID},
-        {protocol::REPORT_VSWING_CMIDD, vertical_swing_options::CMIDD},
-        {protocol::REPORT_VSWING_CDOWN, vertical_swing_options::CDOWN},
-        {protocol::REPORT_VSWING_DOWN,  vertical_swing_options::DOWN},
-        {protocol::REPORT_VSWING_MIDD,  vertical_swing_options::MIDD},
-        {protocol::REPORT_VSWING_MID,   vertical_swing_options::MID},
-        {protocol::REPORT_VSWING_MIDU,  vertical_swing_options::MIDU},
-        {protocol::REPORT_VSWING_UP,    vertical_swing_options::UP},
-    };
-
-    for (const auto& mapping : VSWING_MAP) {
-        if (mode == mapping.val) return mapping.opt;
+    switch (mode) {
+        case protocol::REPORT_VSWING_OFF:   return VerticalSwing::OFF;
+        case protocol::REPORT_VSWING_FULL:  return VerticalSwing::FULL;
+        case protocol::REPORT_VSWING_CUP:   return VerticalSwing::CUP;
+        case protocol::REPORT_VSWING_CMIDU: return VerticalSwing::CMIDU;
+        case protocol::REPORT_VSWING_CMID:  return VerticalSwing::CMID;
+        case protocol::REPORT_VSWING_CMIDD: return VerticalSwing::CMIDD;
+        case protocol::REPORT_VSWING_CDOWN: return VerticalSwing::CDOWN;
+        case protocol::REPORT_VSWING_DOWN:  return VerticalSwing::DOWN;
+        case protocol::REPORT_VSWING_MIDD:  return VerticalSwing::MIDD;
+        case protocol::REPORT_VSWING_MID:   return VerticalSwing::MID;
+        case protocol::REPORT_VSWING_MIDU:  return VerticalSwing::MIDU;
+        case protocol::REPORT_VSWING_UP:    return VerticalSwing::UP;
+        default:
+            ESP_LOGW(TAG, "Received unknown vertical swing mode");
+            return VerticalSwing::OFF;
     }
-
-    ESP_LOGW(TAG, "Received unknown vertical swing mode");
-    return vertical_swing_options::OFF;
 }
 
-const char* GreeACCNT::determine_horizontal_swing()
+HorizontalSwing GreeACCNT::determine_horizontal_swing(const uint8_t *payload)
 {
-    uint8_t mode = (this->serialProcess_.data[protocol::REPORT_HSWING_BYTE]  & protocol::REPORT_HSWING_MASK) >> protocol::REPORT_HSWING_POS;
+    uint8_t mode = (payload[protocol::REPORT_HSWING_BYTE] & protocol::REPORT_HSWING_MASK) >> protocol::REPORT_HSWING_POS;
 
-    static const struct { uint8_t val; const char* const opt; } HSWING_MAP[] = {
-        {protocol::REPORT_HSWING_OFF,    horizontal_swing_options::OFF},
-        {protocol::REPORT_HSWING_FULL,   horizontal_swing_options::FULL},
-        {protocol::REPORT_HSWING_CLEFT,  horizontal_swing_options::CLEFT},
-        {protocol::REPORT_HSWING_CMIDL,  horizontal_swing_options::CMIDL},
-        {protocol::REPORT_HSWING_CMID,   horizontal_swing_options::CMID},
-        {protocol::REPORT_HSWING_CMIDR,  horizontal_swing_options::CMIDR},
-        {protocol::REPORT_HSWING_CRIGHT, horizontal_swing_options::CRIGHT},
-    };
-
-    for (const auto& mapping : HSWING_MAP) {
-        if (mode == mapping.val) return mapping.opt;
+    switch (mode) {
+        case protocol::REPORT_HSWING_OFF:    return HorizontalSwing::OFF;
+        case protocol::REPORT_HSWING_FULL:   return HorizontalSwing::FULL;
+        case protocol::REPORT_HSWING_CLEFT:  return HorizontalSwing::CLEFT;
+        case protocol::REPORT_HSWING_CMIDL:  return HorizontalSwing::CMIDL;
+        case protocol::REPORT_HSWING_CMID:   return HorizontalSwing::CMID;
+        case protocol::REPORT_HSWING_CMIDR:  return HorizontalSwing::CMIDR;
+        case protocol::REPORT_HSWING_CRIGHT: return HorizontalSwing::CRIGHT;
+        default:
+            ESP_LOGW(TAG, "Received unknown horizontal swing mode");
+            return HorizontalSwing::OFF;
     }
-
-    ESP_LOGW(TAG, "Received unknown horizontal swing mode");
-    return horizontal_swing_options::OFF;
 }
 
-const char* GreeACCNT::determine_display()
+DisplayMode GreeACCNT::determine_display(const uint8_t *payload)
 {
-    uint8_t mode = (this->serialProcess_.data[protocol::REPORT_DISP_MODE_BYTE] & protocol::REPORT_DISP_MODE_MASK) >> protocol::REPORT_DISP_MODE_POS;
+    uint8_t mode = (payload[protocol::REPORT_DISP_MODE_BYTE] & protocol::REPORT_DISP_MODE_MASK) >> protocol::REPORT_DISP_MODE_POS;
 
     switch (mode) {
         case protocol::REPORT_DISP_MODE_AUTO:
-            return display_options::SET;
+            return DisplayMode::SET;
         case protocol::REPORT_DISP_MODE_SET:
-            return display_options::SET;
+            return DisplayMode::SET;
         case protocol::REPORT_DISP_MODE_ACT:
-            return display_options::ACT;
+            return DisplayMode::ACT;
         case protocol::REPORT_DISP_MODE_OUT:
             ESP_LOGW(TAG, "Outside temperature display mode is not supported and was requested by the unit. Falling back to Set temperature.");
-            return display_options::SET;
+            return DisplayMode::SET;
         default:
             ESP_LOGW(TAG, "Received unknown display mode: %d. Falling back to Set temperature.", mode);
-            return display_options::SET;
+            return DisplayMode::SET;
     }
 }
 
-bool GreeACCNT::determine_light()
+bool GreeACCNT::determine_light(const uint8_t *payload)
 {
-    return (this->serialProcess_.data[protocol::REPORT_DISP_ON_BYTE] & protocol::REPORT_DISP_ON_MASK) != 0;
+    return (payload[protocol::REPORT_DISP_ON_BYTE] & protocol::REPORT_DISP_ON_MASK) != 0;
 }
 
-const char* GreeACCNT::determine_display_unit()
+DisplayUnit GreeACCNT::determine_display_unit(const uint8_t *payload)
 {
-    if (this->serialProcess_.data[protocol::REPORT_DISP_F_BYTE] & protocol::REPORT_DISP_F_MASK)
+    if (payload[protocol::REPORT_DISP_F_BYTE] & protocol::REPORT_DISP_F_MASK)
     {
-        return display_unit_options::DEGF;
+        return DisplayUnit::DEGF;
     }
     else
     {
-        return display_unit_options::DEGC;
+        return DisplayUnit::DEGC;
     }
 }
 
-bool GreeACCNT::determine_ionizer(){
-    bool ionizer1 = (this->serialProcess_.data[protocol::REPORT_IONIZER1_BYTE] & protocol::REPORT_IONIZER1_MASK) != 0;
-    bool ionizer2 = (this->serialProcess_.data[protocol::REPORT_IONIZER2_BYTE] & protocol::REPORT_IONIZER2_MASK) != 0;
+bool GreeACCNT::determine_ionizer(const uint8_t *payload){
+    bool ionizer1 = (payload[protocol::REPORT_IONIZER1_BYTE] & protocol::REPORT_IONIZER1_MASK) != 0;
+    bool ionizer2 = (payload[protocol::REPORT_IONIZER2_BYTE] & protocol::REPORT_IONIZER2_MASK) != 0;
     return ionizer1 || ionizer2;
 }
 
-bool GreeACCNT::determine_beeper(){
-    return (this->serialProcess_.data[protocol::REPORT_BEEPER_BYTE] & protocol::REPORT_BEEPER_MASK) == 0;
+bool GreeACCNT::determine_beeper(const uint8_t *payload){
+    return (payload[protocol::REPORT_BEEPER_BYTE] & protocol::REPORT_BEEPER_MASK) == 0;
 }
 
-bool GreeACCNT::determine_sleep(){
-    return (this->serialProcess_.data[protocol::REPORT_SLEEP_BYTE] & protocol::REPORT_SLEEP_MASK) != 0;
+bool GreeACCNT::determine_sleep(const uint8_t *payload){
+    return (payload[protocol::REPORT_SLEEP_BYTE] & protocol::REPORT_SLEEP_MASK) != 0;
 }
 
-bool GreeACCNT::determine_xfan(){
-    return (this->serialProcess_.data[protocol::REPORT_XFAN_BYTE] & protocol::REPORT_XFAN_MASK) != 0;
+bool GreeACCNT::determine_xfan(const uint8_t *payload){
+    return (payload[protocol::REPORT_XFAN_BYTE] & protocol::REPORT_XFAN_MASK) != 0;
 }
 
-bool GreeACCNT::determine_powersave(){
-    return (this->serialProcess_.data[protocol::REPORT_POWERSAVE_BYTE] & protocol::REPORT_POWERSAVE_MASK) != 0;
+bool GreeACCNT::determine_powersave(const uint8_t *payload){
+    return (payload[protocol::REPORT_POWERSAVE_BYTE] & protocol::REPORT_POWERSAVE_MASK) != 0;
 }
 
-bool GreeACCNT::determine_turbo(){
-    return (this->serialProcess_.data[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
+bool GreeACCNT::determine_turbo(const uint8_t *payload){
+    return (payload[protocol::REPORT_FAN_TURBO_BYTE] & protocol::REPORT_FAN_TURBO_MASK) != 0;
 }
 
-bool GreeACCNT::determine_ifeel(){
-    return (this->serialProcess_.data[protocol::REPORT_IFEEL_BYTE] & protocol::REPORT_IFEEL_MASK) != 0;
+bool GreeACCNT::determine_ifeel(const uint8_t *payload){
+    return (payload[protocol::REPORT_IFEEL_BYTE] & protocol::REPORT_IFEEL_MASK) != 0;
 }
 
-const char* GreeACCNT::determine_quiet(){
-    if (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK)
-        return quiet_options::ON;
-    if (this->serialProcess_.data[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_AUTO_MASK)
-        return quiet_options::AUTO;
-    return quiet_options::OFF;
+QuietMode GreeACCNT::determine_quiet(const uint8_t *payload){
+    if (payload[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_MASK)
+        return QuietMode::ON;
+    if (payload[protocol::REPORT_FAN_QUIET_BYTE] & protocol::REPORT_FAN_QUIET_AUTO_MASK)
+        return QuietMode::AUTO;
+    return QuietMode::OFF;
 }
 
 
@@ -1003,7 +984,7 @@ const char* GreeACCNT::determine_quiet(){
  * Sensor handling
  */
 
-void GreeACCNT::on_vertical_swing_change(const std::string &swing)
+void GreeACCNT::on_vertical_swing_change(VerticalSwing swing)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1014,7 +995,7 @@ void GreeACCNT::on_vertical_swing_change(const std::string &swing)
     this->vertical_swing_state_ = swing;
 }
 
-void GreeACCNT::on_horizontal_swing_change(const std::string &swing)
+void GreeACCNT::on_horizontal_swing_change(HorizontalSwing swing)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1025,7 +1006,7 @@ void GreeACCNT::on_horizontal_swing_change(const std::string &swing)
     this->horizontal_swing_state_ = swing;
 }
 
-void GreeACCNT::on_display_change(const std::string &display)
+void GreeACCNT::on_display_change(DisplayMode display)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1036,7 +1017,7 @@ void GreeACCNT::on_display_change(const std::string &display)
     this->display_state_ = display;
 }
 
-void GreeACCNT::on_display_unit_change(const std::string &display_unit)
+void GreeACCNT::on_display_unit_change(DisplayUnit display_unit)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1047,21 +1028,21 @@ void GreeACCNT::on_display_unit_change(const std::string &display_unit)
     this->display_unit_state_ = display_unit;
 }
 
-void GreeACCNT::on_light_mode_change(const std::string &mode)
+void GreeACCNT::on_light_mode_change(LightMode mode)
 {
     if (this->state_ != ACState::Ready)
         return;
 
-    ESP_LOGD(TAG, "Setting light mode to %s", mode.c_str());
+    ESP_LOGD(TAG, "Setting light mode to %u", static_cast<uint8_t>(mode));
 
     this->mark_for_update_();
     this->light_mode_ = mode;
 
-    if (this->light_mode_ == light_options::AUTO)
+    if (this->light_mode_ == LightMode::AUTO)
     {
         this->light_state_ = (this->mode != climate::CLIMATE_MODE_OFF);
     }
-    else if (this->light_mode_ == light_options::ON)
+    else if (this->light_mode_ == LightMode::ON)
     {
         this->light_state_ = true;
     }
@@ -1138,7 +1119,7 @@ void GreeACCNT::on_turbo_change(bool turbo)
 
     /* Requirement 1: when turbo gets on, quite must get off. */
     if (turbo) {
-        this->update_quiet(quiet_options::OFF);
+        this->update_quiet(QuietMode::OFF);
     }
 }
 
@@ -1153,7 +1134,7 @@ void GreeACCNT::on_ifeel_change(bool ifeel)
     this->ifeel_state_ = ifeel;
 }
 
-void GreeACCNT::on_quiet_change(const std::string &quiet)
+void GreeACCNT::on_quiet_change(QuietMode quiet)
 {
     if (this->state_ != ACState::Ready)
         return;
@@ -1164,7 +1145,7 @@ void GreeACCNT::on_quiet_change(const std::string &quiet)
     this->quiet_state_ = quiet;
 
     /* Requirement 1: when gets on/auto then turbo must go off. */
-    if (quiet != quiet_options::OFF) {
+    if (quiet != QuietMode::OFF) {
         this->update_turbo(false);
     }
 }

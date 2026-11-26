@@ -151,13 +151,13 @@ class GreeACCNT : public GreeAC {
     public:
         void control(const climate::ClimateCall &call) override;
 
-        void on_horizontal_swing_change(const std::string &swing) override;
-        void on_vertical_swing_change(const std::string &swing) override;
+        void on_horizontal_swing_change(HorizontalSwing swing) override;
+        void on_vertical_swing_change(VerticalSwing swing) override;
 
-        void on_display_change(const std::string &display) override;
-        void on_display_unit_change(const std::string &display_unit) override;
+        void on_display_change(DisplayMode display) override;
+        void on_display_unit_change(DisplayUnit display_unit) override;
 
-        void on_light_mode_change(const std::string &mode) override;
+        void on_light_mode_change(LightMode mode) override;
         void on_ionizer_change(bool ionizer) override;
         void on_beeper_change(bool beeper) override;
         void on_sleep_change(bool sleep) override;
@@ -165,7 +165,7 @@ class GreeACCNT : public GreeAC {
         void on_powersave_change(bool powersave) override;
         void on_turbo_change(bool turbo) override;
         void on_ifeel_change(bool ifeel) override;
-        void on_quiet_change(const std::string &quiet) override;
+        void on_quiet_change(QuietMode quiet) override;
 
         void setup() override;
         void loop() override;
@@ -189,10 +189,10 @@ class GreeACCNT : public GreeAC {
         climate::ClimateMode mode_internal_;
         bool power_internal_;
 
-        std::string display_mode_internal_;
+        uint32_t model_id_raw_{0xFFFFFFFFu};
         bool display_power_internal_;
 
-        bool processUnitReport();
+        bool processUnitReport(const uint8_t *payload);
 
         void send_params_set_packet();
         void send_mac_report_packet();
@@ -206,24 +206,24 @@ class GreeACCNT : public GreeAC {
         bool verify_packet();
         void handle_packet();
 
-        climate::ClimateMode determine_mode();
-        const char* determine_fan_mode();
+        climate::ClimateMode determine_mode(const uint8_t *payload);
+        FanMode determine_fan_mode(const uint8_t *payload);
 
-        const char* determine_vertical_swing();
-        const char* determine_horizontal_swing();
+        VerticalSwing determine_vertical_swing(const uint8_t *payload);
+        HorizontalSwing determine_horizontal_swing(const uint8_t *payload);
 
-        const char* determine_display();
-        const char* determine_display_unit();
+        DisplayMode determine_display(const uint8_t *payload);
+        DisplayUnit determine_display_unit(const uint8_t *payload);
 
-        bool determine_light();
-        bool determine_ionizer();
-        bool determine_beeper();
-        bool determine_sleep();
-        bool determine_xfan();
-        bool determine_powersave();
-        bool determine_turbo();
-        bool determine_ifeel();
-        const char* determine_quiet();
+        bool determine_light(const uint8_t *payload);
+        bool determine_ionizer(const uint8_t *payload);
+        bool determine_beeper(const uint8_t *payload);
+        bool determine_sleep(const uint8_t *payload);
+        bool determine_xfan(const uint8_t *payload);
+        bool determine_powersave(const uint8_t *payload);
+        bool determine_turbo(const uint8_t *payload);
+        bool determine_ifeel(const uint8_t *payload);
+        QuietMode determine_quiet(const uint8_t *payload);
 };
 
 }  // namespace CNT

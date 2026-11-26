@@ -14,67 +14,84 @@ namespace esphome {
 namespace gree_ac {
 
 
-namespace fan_modes{
-    const char* const FAN_AUTO  = "Auto";
-    const char* const FAN_MIN   = "Minimum";
-    const char* const FAN_LOW   = "Low";
-    const char* const FAN_MED   = "Medium";
-    const char* const FAN_HIGH  = "High";
-    const char* const FAN_MAX   = "Maximum";
+namespace fan_modes {
+    const char *const FAN_MIN = "Minimum";
+    const char *const FAN_MAX = "Maximum";
 }
 
-/* this must be same as QUIET_OPTIONS in climate.py */
-namespace quiet_options{
-    const char* const OFF   = "Off";
-    const char* const ON    = "On";
-    const char* const AUTO  = "Auto";
-}
+enum class FanMode : uint8_t {
+    AUTO = 0,
+    MIN = 1,
+    LOW = 2,
+    MED = 3,
+    HIGH = 4,
+    MAX = 5,
+};
 
-/* this must be same as HORIZONTAL_SWING_OPTIONS in climate.py */
-namespace horizontal_swing_options{
-    const char* const OFF    = "Off";
-    const char* const FULL   = "Swing - Full";
-    const char* const CLEFT  = "Constant - Left";
-    const char* const CMIDL  = "Constant - Mid-Left";
-    const char* const CMID   = "Constant - Middle";
-    const char* const CMIDR  = "Constant - Mid-Right";
-    const char* const CRIGHT = "Constant - Right";
-}
+/* Option indices must match QUIET_OPTIONS in climate.py */
+enum class QuietMode : uint8_t {
+    OFF = 0,
+    ON = 1,
+    AUTO = 2,
+    COUNT = 3,
+    NONE = 0xFF,
+};
 
-/* this must be same as VERTICAL_SWING_OPTIONS in climate.py */
-namespace vertical_swing_options{
-    const char* const OFF   = "Off";
-    const char* const FULL  = "Swing - Full";
-    const char* const DOWN  = "Swing - Down";
-    const char* const MIDD  = "Swing - Mid-Down";
-    const char* const MID   = "Swing - Middle";
-    const char* const MIDU  = "Swing - Mid-Up";
-    const char* const UP    = "Swing - Up";
-    const char* const CDOWN = "Constant - Down";
-    const char* const CMIDD = "Constant - Mid-Down";
-    const char* const CMID  = "Constant - Middle";
-    const char* const CMIDU = "Constant - Mid-Up";
-    const char* const CUP   = "Constant - Up";
-}
+/* Option indices must match HORIZONTAL_SWING_OPTIONS in climate.py */
+enum class HorizontalSwing : uint8_t {
+    OFF = 0,
+    FULL = 1,
+    CLEFT = 2,
+    CMIDL = 3,
+    CMID = 4,
+    CMIDR = 5,
+    CRIGHT = 6,
+    COUNT = 7,
+    NONE = 0xFF,
+};
 
-/* this must be same as DISPLAY_OPTIONS in climate.py */
-namespace display_options{
-    const char* const SET  = "Set temperature";
-    const char* const ACT  = "Actual temperature";
-}
+/* Option indices must match VERTICAL_SWING_OPTIONS in climate.py */
+enum class VerticalSwing : uint8_t {
+    OFF = 0,
+    FULL = 1,
+    DOWN = 2,
+    MIDD = 3,
+    MID = 4,
+    MIDU = 5,
+    UP = 6,
+    CDOWN = 7,
+    CMIDD = 8,
+    CMID = 9,
+    CMIDU = 10,
+    CUP = 11,
+    COUNT = 12,
+    NONE = 0xFF,
+};
 
-/* this must be same as DISPLAY_UNIT_OPTIONS in climate.py */
-namespace display_unit_options{
-    const char* const DEGC = "C";
-    const char* const DEGF = "F";
-}
+/* Option indices must match DISPLAY_OPTIONS in climate.py */
+enum class DisplayMode : uint8_t {
+    SET = 0,
+    ACT = 1,
+    COUNT = 2,
+    NONE = 0xFF,
+};
 
-/* this must be same as LIGHT_OPTIONS in climate.py */
-namespace light_options{
-    const char* const OFF   = "Off";
-    const char* const ON    = "On";
-    const char* const AUTO  = "Auto";
-}
+/* Option indices must match DISPLAY_UNIT_OPTIONS in climate.py */
+enum class DisplayUnit : uint8_t {
+    DEGC = 0,
+    DEGF = 1,
+    COUNT = 2,
+    NONE = 0xFF,
+};
+
+/* Option indices must match LIGHT_OPTIONS in climate.py */
+enum class LightMode : uint8_t {
+    OFF = 0,
+    ON = 1,
+    AUTO = 2,
+    COUNT = 3,
+    NONE = 0xFF,
+};
 
 typedef enum {
         STATE_WAIT_SYNC,
@@ -84,7 +101,7 @@ typedef enum {
 } SerialProcessState_t;
 
 typedef struct {
-  uint8_t data[200];
+  uint8_t data[64];
   size_t size;
   uint8_t frame_size;
   SerialProcessState_t state;
@@ -140,13 +157,13 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         text_sensor::TextSensor *model_id_text_sensor_ = nullptr; /* Text sensor for Model ID */
 
-        std::string vertical_swing_state_;
-        std::string horizontal_swing_state_;
+        VerticalSwing vertical_swing_state_{VerticalSwing::NONE};
+        HorizontalSwing horizontal_swing_state_{HorizontalSwing::NONE};
 
-        std::string display_state_;
-        std::string display_unit_state_;
-        std::string quiet_state_;
-        std::string light_mode_;
+        DisplayMode display_state_{DisplayMode::NONE};
+        DisplayUnit display_unit_state_{DisplayUnit::NONE};
+        QuietMode quiet_state_{QuietMode::NONE};
+        LightMode light_mode_{LightMode::AUTO};
 
         bool light_state_;
         bool ionizer_state_;
@@ -171,13 +188,13 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         bool update_current_temperature(float temperature);
         bool update_target_temperature(float temperature);
 
-        bool update_swing_horizontal(const std::string &swing);
-        bool update_swing_vertical(const std::string &swing);
+        bool update_swing_horizontal(HorizontalSwing swing);
+        bool update_swing_vertical(VerticalSwing swing);
 
-        bool update_display(const std::string &display);
-        bool update_display_unit(const std::string &display_unit);
+        bool update_display(DisplayMode display);
+        bool update_display_unit(DisplayUnit display_unit);
 
-        bool update_fan_mode(const std::string &fan_mode);
+        bool update_fan_mode(FanMode fan_mode);
         bool update_light(bool light);
         bool update_ionizer(bool ionizer);
         bool update_beeper(bool beeper);
@@ -186,15 +203,15 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         bool update_powersave(bool powersave);
         bool update_turbo(bool turbo);
         bool update_ifeel(bool ifeel);
-        bool update_quiet(const std::string &quiet);
+        bool update_quiet(QuietMode quiet);
 
-        virtual void on_horizontal_swing_change(const std::string &swing) = 0;
-        virtual void on_vertical_swing_change(const std::string &swing) = 0;
+        virtual void on_horizontal_swing_change(HorizontalSwing swing) = 0;
+        virtual void on_vertical_swing_change(VerticalSwing swing) = 0;
 
-        virtual void on_display_change(const std::string &display) = 0;
-        virtual void on_display_unit_change(const std::string &display_unit) = 0;
+        virtual void on_display_change(DisplayMode display) = 0;
+        virtual void on_display_unit_change(DisplayUnit display_unit) = 0;
 
-        virtual void on_light_mode_change(const std::string &mode) = 0;
+        virtual void on_light_mode_change(LightMode mode) = 0;
         virtual void on_ionizer_change(bool ionizer) = 0;
         virtual void on_beeper_change(bool beeper) = 0;
         virtual void on_sleep_change(bool sleep) = 0;
@@ -202,11 +219,11 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
         virtual void on_powersave_change(bool powersave) = 0;
         virtual void on_turbo_change(bool turbo) = 0;
         virtual void on_ifeel_change(bool ifeel) = 0;
-        virtual void on_quiet_change(const std::string &quiet) = 0;
+        virtual void on_quiet_change(QuietMode quiet) = 0;
 
         climate::ClimateAction determine_action();
 
-        void log_packet(const uint8_t *data, size_t len, bool outgoing = false);
+        void log_packet(const uint8_t *data, size_t len, bool outgoing = false) __attribute__((noinline));
 
     protected:
         static const char *const VERSION;

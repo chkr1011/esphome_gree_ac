@@ -16,7 +16,7 @@ const uint8_t GreeAC::MAX_TEMPERATURE = 30;
 const float GreeAC::TEMPERATURE_STEP = 1.0;
 const float GreeAC::TEMPERATURE_TOLERANCE = 2;
 const uint8_t GreeAC::TEMPERATURE_THRESHOLD = 100;
-const uint8_t GreeAC::DATA_MAX = 200;
+const uint8_t GreeAC::DATA_MAX = sizeof(SerialProcess_t::data);
 
 climate::ClimateTraits GreeAC::traits()
 {
@@ -43,11 +43,11 @@ void GreeAC::setup()
   // Initialize times
     this->init_time_ = millis();
     this->last_packet_sent_ = millis();
-    this->light_mode_ = light_options::AUTO;
+    this->light_mode_ = LightMode::AUTO;
     this->light_state_ = false;
 
     if (this->light_select_ != nullptr) {
-        this->light_select_->publish_state(this->light_mode_);
+        this->light_select_->publish_state(static_cast<size_t>(this->light_mode_));
     }
 
     if (this->enable_tx_switch_ != nullptr) {
@@ -106,14 +106,16 @@ void GreeAC::loop()
     }
 
     if (s == 3) {
+      if (c > DATA_MAX - 3) {
+        this->serialProcess_.size = 0;
+        continue;
+      }
       this->serialProcess_.frame_size = c;
     }
 
     if (s >= 3 && s == (size_t)(this->serialProcess_.frame_size + 3)) {
       this->serialProcess_.state = STATE_COMPLETE;
-    }
-
-    if (s >= DATA_MAX) {
+    } else if (s >= DATA_MAX) {
       this->serialProcess_.size = 0;
     }
   }
@@ -147,28 +149,34 @@ bool GreeAC::update_target_temperature(float temperature)
     return true;
 }
 
-bool GreeAC::update_fan_mode(const std::string &fan_mode)
+bool GreeAC::update_fan_mode(FanMode fan_mode)
 {
-    if (fan_mode == fan_modes::FAN_MIN || fan_mode == fan_modes::FAN_MAX) {
-        if (this->get_custom_fan_mode() == fan_mode)
+    if (fan_mode == FanMode::MIN || fan_mode == FanMode::MAX) {
+        const char *custom = (fan_mode == FanMode::MIN) ? fan_modes::FAN_MIN : fan_modes::FAN_MAX;
+        if (this->get_custom_fan_mode() == custom)
             return false;
         this->fan_mode.reset();
-        this->set_custom_fan_mode_(fan_mode.c_str());
+        this->set_custom_fan_mode_(custom);
         return true;
     }
 
     climate::ClimateFanMode new_fan_mode;
-    if (fan_mode == fan_modes::FAN_AUTO) {
-        new_fan_mode = climate::CLIMATE_FAN_AUTO;
-    } else if (fan_mode == fan_modes::FAN_LOW) {
-        new_fan_mode = climate::CLIMATE_FAN_LOW;
-    } else if (fan_mode == fan_modes::FAN_MED) {
-        new_fan_mode = climate::CLIMATE_FAN_MEDIUM;
-    } else if (fan_mode == fan_modes::FAN_HIGH) {
-        new_fan_mode = climate::CLIMATE_FAN_HIGH;
-    } else {
-        ESP_LOGW(TAG, "Unknown fan mode: %s", fan_mode.c_str());
-        return false;
+    switch (fan_mode) {
+        case FanMode::AUTO:
+            new_fan_mode = climate::CLIMATE_FAN_AUTO;
+            break;
+        case FanMode::LOW:
+            new_fan_mode = climate::CLIMATE_FAN_LOW;
+            break;
+        case FanMode::MED:
+            new_fan_mode = climate::CLIMATE_FAN_MEDIUM;
+            break;
+        case FanMode::HIGH:
+            new_fan_mode = climate::CLIMATE_FAN_HIGH;
+            break;
+        default:
+            ESP_LOGW(TAG, "Unknown fan mode: %u", static_cast<uint8_t>(fan_mode));
+            return false;
     }
 
     if (this->fan_mode == new_fan_mode && this->get_custom_fan_mode().empty())
@@ -179,62 +187,78 @@ bool GreeAC::update_fan_mode(const std::string &fan_mode)
     return true;
 }
 
-bool GreeAC::update_swing_horizontal(const std::string &swing)
+bool GreeAC::update_swing_horizontal(HorizontalSwing swing)
 {
-    if (this->horizontal_swing_state_ == swing)
+    if (swing >= HorizontalSwing::COUNT || this->horizontal_swing_state_ == swing)
         return false;
 
     this->horizontal_swing_state_ = swing;
 
-    if (this->horizontal_swing_select_ != nullptr &&
-        this->horizontal_swing_select_->current_option() != this->horizontal_swing_state_)
+    if (this->horizontal_swing_select_ != nullptr)
     {
-        this->horizontal_swing_select_->publish_state(this->horizontal_swing_state_);
+        const auto idx = static_cast<size_t>(swing);
+        auto active = this->horizontal_swing_select_->active_index();
+        if (!active.has_value() || *active != idx)
+        {
+            this->horizontal_swing_select_->publish_state(idx);
+        }
     }
     return true;
 }
 
-bool GreeAC::update_swing_vertical(const std::string &swing)
+bool GreeAC::update_swing_vertical(VerticalSwing swing)
 {
-    if (this->vertical_swing_state_ == swing)
+    if (swing >= VerticalSwing::COUNT || this->vertical_swing_state_ == swing)
         return false;
 
     this->vertical_swing_state_ = swing;
 
-    if (this->vertical_swing_select_ != nullptr && 
-        this->vertical_swing_select_->current_option() != this->vertical_swing_state_)
+    if (this->vertical_swing_select_ != nullptr)
     {
-        this->vertical_swing_select_->publish_state(this->vertical_swing_state_);
+        const auto idx = static_cast<size_t>(swing);
+        auto active = this->vertical_swing_select_->active_index();
+        if (!active.has_value() || *active != idx)
+        {
+            this->vertical_swing_select_->publish_state(idx);
+        }
     }
     return true;
 }
 
-bool GreeAC::update_display(const std::string &display)
+bool GreeAC::update_display(DisplayMode display)
 {
-    if (this->display_state_ == display)
+    if (display >= DisplayMode::COUNT || this->display_state_ == display)
         return false;
 
     this->display_state_ = display;
 
-    if (this->display_select_ != nullptr && 
-        this->display_select_->current_option() != this->display_state_)
+    if (this->display_select_ != nullptr)
     {
-        this->display_select_->publish_state(this->display_state_);
+        const auto idx = static_cast<size_t>(display);
+        auto active = this->display_select_->active_index();
+        if (!active.has_value() || *active != idx)
+        {
+            this->display_select_->publish_state(idx);
+        }
     }
     return true;
 }
 
-bool GreeAC::update_display_unit(const std::string &display_unit)
+bool GreeAC::update_display_unit(DisplayUnit display_unit)
 {
-    if (this->display_unit_state_ == display_unit)
+    if (display_unit >= DisplayUnit::COUNT || this->display_unit_state_ == display_unit)
         return false;
 
     this->display_unit_state_ = display_unit;
 
-    if (this->display_unit_select_ != nullptr && 
-        this->display_unit_select_->current_option() != this->display_unit_state_)
+    if (this->display_unit_select_ != nullptr)
     {
-        this->display_unit_select_->publish_state(this->display_unit_state_);
+        const auto idx = static_cast<size_t>(display_unit);
+        auto active = this->display_unit_select_->active_index();
+        if (!active.has_value() || *active != idx)
+        {
+            this->display_unit_select_->publish_state(idx);
+        }
     }
     return true;
 }
@@ -244,11 +268,15 @@ bool GreeAC::update_light(bool light)
     bool changed = (this->light_state_ != light);
     this->light_state_ = light;
 
-    if (this->light_select_ != nullptr &&
-        this->light_select_->current_option() != this->light_mode_)
+    if (this->light_select_ != nullptr && this->light_mode_ < LightMode::COUNT)
     {
-        this->light_select_->publish_state(this->light_mode_);
-        changed = true;
+        const auto idx = static_cast<size_t>(this->light_mode_);
+        auto active = this->light_select_->active_index();
+        if (!active.has_value() || *active != idx)
+        {
+            this->light_select_->publish_state(idx);
+            changed = true;
+        }
     }
     return changed;
 }
@@ -351,17 +379,21 @@ bool GreeAC::update_ifeel(bool ifeel)
     return true;
 }
 
-bool GreeAC::update_quiet(const std::string &quiet)
+bool GreeAC::update_quiet(QuietMode quiet)
 {
-    if (this->quiet_state_ == quiet)
+    if (quiet >= QuietMode::COUNT || this->quiet_state_ == quiet)
         return false;
 
     this->quiet_state_ = quiet;
 
-    if (this->quiet_select_ != nullptr &&
-        this->quiet_select_->current_option() != this->quiet_state_)
+    if (this->quiet_select_ != nullptr)
     {
-        this->quiet_select_->publish_state(this->quiet_state_);
+        const auto idx = static_cast<size_t>(quiet);
+        auto active = this->quiet_select_->active_index();
+        if (!active.has_value() || *active != idx)
+        {
+            this->quiet_select_->publish_state(idx);
+        }
     }
     return true;
 }
@@ -393,10 +425,12 @@ void GreeAC::set_vertical_swing_select(select::Select *vertical_swing_select)
 {
     this->vertical_swing_select_ = vertical_swing_select;
     this->vertical_swing_select_->add_on_state_callback([this](size_t index) {
-        auto value = this->vertical_swing_select_->at(index);
-        if (!value.has_value() || *value == this->vertical_swing_state_)
+        if (index >= static_cast<size_t>(VerticalSwing::COUNT))
             return;
-        this->on_vertical_swing_change(*value);
+        auto swing = static_cast<VerticalSwing>(index);
+        if (swing == this->vertical_swing_state_)
+            return;
+        this->on_vertical_swing_change(swing);
     });
 }
 
@@ -404,10 +438,12 @@ void GreeAC::set_horizontal_swing_select(select::Select *horizontal_swing_select
 {
     this->horizontal_swing_select_ = horizontal_swing_select;
     this->horizontal_swing_select_->add_on_state_callback([this](size_t index) {
-        auto value = this->horizontal_swing_select_->at(index);
-        if (!value.has_value() || *value == this->horizontal_swing_state_)
+        if (index >= static_cast<size_t>(HorizontalSwing::COUNT))
             return;
-        this->on_horizontal_swing_change(*value);
+        auto swing = static_cast<HorizontalSwing>(index);
+        if (swing == this->horizontal_swing_state_)
+            return;
+        this->on_horizontal_swing_change(swing);
     });
 }
 
@@ -415,10 +451,12 @@ void GreeAC::set_display_select(select::Select *display_select)
 {
     this->display_select_ = display_select;
     this->display_select_->add_on_state_callback([this](size_t index) {
-        auto value = this->display_select_->at(index);
-        if (!value.has_value() || *value == this->display_state_)
+        if (index >= static_cast<size_t>(DisplayMode::COUNT))
             return;
-        this->on_display_change(*value);
+        auto display = static_cast<DisplayMode>(index);
+        if (display == this->display_state_)
+            return;
+        this->on_display_change(display);
     });
 }
 
@@ -426,10 +464,12 @@ void GreeAC::set_display_unit_select(select::Select *display_unit_select)
 {
     this->display_unit_select_ = display_unit_select;
     this->display_unit_select_->add_on_state_callback([this](size_t index) {
-        auto value = this->display_unit_select_->at(index);
-        if (!value.has_value() || *value == this->display_unit_state_)
+        if (index >= static_cast<size_t>(DisplayUnit::COUNT))
             return;
-        this->on_display_unit_change(*value);
+        auto unit = static_cast<DisplayUnit>(index);
+        if (unit == this->display_unit_state_)
+            return;
+        this->on_display_unit_change(unit);
     });
 }
 
@@ -437,10 +477,12 @@ void GreeAC::set_light_select(select::Select *light_select)
 {
     this->light_select_ = light_select;
     this->light_select_->add_on_state_callback([this](size_t index) {
-        auto value = this->light_select_->at(index);
-        if (!value.has_value() || *value == this->light_mode_)
+        if (index >= static_cast<size_t>(LightMode::COUNT))
             return;
-        this->on_light_mode_change(*value);
+        auto mode = static_cast<LightMode>(index);
+        if (mode == this->light_mode_)
+            return;
+        this->on_light_mode_change(mode);
     });
 }
 
@@ -528,10 +570,12 @@ void GreeAC::set_quiet_select(select::Select *quiet_select)
 {
     this->quiet_select_ = quiet_select;
     this->quiet_select_->add_on_state_callback([this](size_t index) {
-        auto value = this->quiet_select_->at(index);
-        if (!value.has_value() || *value == this->quiet_state_)
+        if (index >= static_cast<size_t>(QuietMode::COUNT))
             return;
-        this->on_quiet_change(*value);
+        auto quiet = static_cast<QuietMode>(index);
+        if (quiet == this->quiet_state_)
+            return;
+        this->on_quiet_change(quiet);
     });
 }
 
@@ -550,7 +594,7 @@ void GreeAC::log_packet(const uint8_t *data, size_t len, bool outgoing)
         return;
     }
 
-#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_DEBUG
+#if ESPHOME_LOG_LEVEL >= ESPHOME_LOG_LEVEL_VERBOSE
     const char *prefix = "";
     if (outgoing) {
         bool tx_enabled = (this->enable_tx_switch_ == nullptr || this->enable_tx_switch_->state);
@@ -559,7 +603,11 @@ void GreeAC::log_packet(const uint8_t *data, size_t len, bool outgoing)
         prefix = " RX :";
     }
     char hex_buf[format_hex_pretty_size(sizeof(SerialProcess_t::data))];
-    ESP_LOGD(TAG, "%s %s", prefix, format_hex_pretty_to(hex_buf, sizeof(hex_buf), data, len, '.'));
+    ESP_LOGV(TAG, "%s %s", prefix, format_hex_pretty_to(hex_buf, sizeof(hex_buf), data, len, '.'));
+#else
+    (void) data;
+    (void) len;
+    (void) outgoing;
 #endif
 }
 
