@@ -1,4 +1,3 @@
-#based on: https://github.com/DomiStyle/esphome-panasonic-ac
 from esphome.const import (
     CONF_ID,
     CONF_NAME,
@@ -177,6 +176,7 @@ async def to_code(config):
             "mdi:lightbulb-on-outline",
         ),
     ]
+
     for conf_key, name, options, setter, icon in selects:
         sel_id = config[conf_key]
         sel_conf = select.select_schema(GreeACSelect)(
@@ -197,6 +197,7 @@ async def to_code(config):
         (CONF_ENABLE_TX_SWITCH, "Enable TX", "set_enable_tx_switch", "mdi:email-arrow-right"),
         (CONF_DUMP_PACKETS_SWITCH, "Dump packets", "set_dump_packets_switch", "mdi:details"),
     ]
+
     for conf_key, name, setter, icon in switches:
         sw_id = config[conf_key]
         sw_conf = {

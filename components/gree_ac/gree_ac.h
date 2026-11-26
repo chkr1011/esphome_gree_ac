@@ -20,77 +20,77 @@ namespace fan_modes {
 }
 
 enum class FanMode : uint8_t {
-    AUTO = 0,
-    MIN = 1,
-    LOW = 2,
-    MED = 3,
-    HIGH = 4,
-    MAX = 5,
+    Auto = 0,
+    Min = 1,
+    Low = 2,
+    Med = 3,
+    High = 4,
+    Max = 5,
 };
 
 /* Option indices must match QUIET_OPTIONS in climate.py */
 enum class QuietMode : uint8_t {
-    OFF = 0,
-    ON = 1,
-    AUTO = 2,
-    COUNT = 3,
-    NONE = 0xFF,
+    Off = 0,
+    On = 1,
+    Auto = 2,
+    Count = 3,
+    Unset = 0xFF,
 };
 
 /* Option indices must match HORIZONTAL_SWING_OPTIONS in climate.py */
 enum class HorizontalSwing : uint8_t {
-    OFF = 0,
-    FULL = 1,
-    CLEFT = 2,
-    CMIDL = 3,
-    CMID = 4,
-    CMIDR = 5,
-    CRIGHT = 6,
-    COUNT = 7,
-    NONE = 0xFF,
+    Off = 0,
+    Full = 1,
+    CLeft = 2,
+    CMidL = 3,
+    CMid = 4,
+    CMidR = 5,
+    CRight = 6,
+    Count = 7,
+    Unset = 0xFF,
 };
 
 /* Option indices must match VERTICAL_SWING_OPTIONS in climate.py */
 enum class VerticalSwing : uint8_t {
-    OFF = 0,
-    FULL = 1,
-    DOWN = 2,
-    MIDD = 3,
-    MID = 4,
-    MIDU = 5,
-    UP = 6,
-    CDOWN = 7,
-    CMIDD = 8,
-    CMID = 9,
-    CMIDU = 10,
-    CUP = 11,
-    COUNT = 12,
-    NONE = 0xFF,
+    Off = 0,
+    Full = 1,
+    Down = 2,
+    MidD = 3,
+    Mid = 4,
+    MidU = 5,
+    Up = 6,
+    CDown = 7,
+    CMidD = 8,
+    CMid = 9,
+    CMidU = 10,
+    CUp = 11,
+    Count = 12,
+    Unset = 0xFF,
 };
 
 /* Option indices must match DISPLAY_OPTIONS in climate.py */
 enum class DisplayMode : uint8_t {
-    SET = 0,
-    ACT = 1,
-    COUNT = 2,
-    NONE = 0xFF,
+    Set = 0,
+    Act = 1,
+    Count = 2,
+    Unset = 0xFF,
 };
 
 /* Option indices must match DISPLAY_UNIT_OPTIONS in climate.py */
 enum class DisplayUnit : uint8_t {
-    DEGC = 0,
-    DEGF = 1,
-    COUNT = 2,
-    NONE = 0xFF,
+    DegC = 0,
+    DegF = 1,
+    Count = 2,
+    Unset = 0xFF,
 };
 
 /* Option indices must match LIGHT_OPTIONS in climate.py */
 enum class LightMode : uint8_t {
-    OFF = 0,
-    ON = 1,
-    AUTO = 2,
-    COUNT = 3,
-    NONE = 0xFF,
+    Off = 0,
+    On = 1,
+    Auto = 2,
+    Count = 3,
+    Unset = 0xFF,
 };
 
 typedef enum {
@@ -157,13 +157,13 @@ class GreeAC : public Component, public uart::UARTDevice, public climate::Climat
 
         text_sensor::TextSensor *model_id_text_sensor_ = nullptr; /* Text sensor for Model ID */
 
-        VerticalSwing vertical_swing_state_{VerticalSwing::NONE};
-        HorizontalSwing horizontal_swing_state_{HorizontalSwing::NONE};
+        VerticalSwing vertical_swing_state_{VerticalSwing::Unset};
+        HorizontalSwing horizontal_swing_state_{HorizontalSwing::Unset};
 
-        DisplayMode display_state_{DisplayMode::NONE};
-        DisplayUnit display_unit_state_{DisplayUnit::NONE};
-        QuietMode quiet_state_{QuietMode::NONE};
-        LightMode light_mode_{LightMode::AUTO};
+        DisplayMode display_state_{DisplayMode::Unset};
+        DisplayUnit display_unit_state_{DisplayUnit::Unset};
+        QuietMode quiet_state_{QuietMode::Unset};
+        LightMode light_mode_{LightMode::Auto};
 
         bool light_state_;
         bool ionizer_state_;

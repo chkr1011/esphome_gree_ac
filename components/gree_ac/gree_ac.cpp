@@ -43,7 +43,7 @@ void GreeAC::setup()
   // Initialize times
     this->init_time_ = millis();
     this->last_packet_sent_ = millis();
-    this->light_mode_ = LightMode::AUTO;
+    this->light_mode_ = LightMode::Auto;
     this->light_state_ = false;
 
     if (this->light_select_ != nullptr) {
@@ -151,8 +151,8 @@ bool GreeAC::update_target_temperature(float temperature)
 
 bool GreeAC::update_fan_mode(FanMode fan_mode)
 {
-    if (fan_mode == FanMode::MIN || fan_mode == FanMode::MAX) {
-        const char *custom = (fan_mode == FanMode::MIN) ? fan_modes::FAN_MIN : fan_modes::FAN_MAX;
+    if (fan_mode == FanMode::Min || fan_mode == FanMode::Max) {
+        const char *custom = (fan_mode == FanMode::Min) ? fan_modes::FAN_MIN : fan_modes::FAN_MAX;
         if (this->get_custom_fan_mode() == custom)
             return false;
         this->fan_mode.reset();
@@ -162,16 +162,16 @@ bool GreeAC::update_fan_mode(FanMode fan_mode)
 
     climate::ClimateFanMode new_fan_mode;
     switch (fan_mode) {
-        case FanMode::AUTO:
+        case FanMode::Auto:
             new_fan_mode = climate::CLIMATE_FAN_AUTO;
             break;
-        case FanMode::LOW:
+        case FanMode::Low:
             new_fan_mode = climate::CLIMATE_FAN_LOW;
             break;
-        case FanMode::MED:
+        case FanMode::Med:
             new_fan_mode = climate::CLIMATE_FAN_MEDIUM;
             break;
-        case FanMode::HIGH:
+        case FanMode::High:
             new_fan_mode = climate::CLIMATE_FAN_HIGH;
             break;
         default:
@@ -189,7 +189,7 @@ bool GreeAC::update_fan_mode(FanMode fan_mode)
 
 bool GreeAC::update_swing_horizontal(HorizontalSwing swing)
 {
-    if (swing >= HorizontalSwing::COUNT || this->horizontal_swing_state_ == swing)
+    if (swing >= HorizontalSwing::Count || this->horizontal_swing_state_ == swing)
         return false;
 
     this->horizontal_swing_state_ = swing;
@@ -208,7 +208,7 @@ bool GreeAC::update_swing_horizontal(HorizontalSwing swing)
 
 bool GreeAC::update_swing_vertical(VerticalSwing swing)
 {
-    if (swing >= VerticalSwing::COUNT || this->vertical_swing_state_ == swing)
+    if (swing >= VerticalSwing::Count || this->vertical_swing_state_ == swing)
         return false;
 
     this->vertical_swing_state_ = swing;
@@ -227,7 +227,7 @@ bool GreeAC::update_swing_vertical(VerticalSwing swing)
 
 bool GreeAC::update_display(DisplayMode display)
 {
-    if (display >= DisplayMode::COUNT || this->display_state_ == display)
+    if (display >= DisplayMode::Count || this->display_state_ == display)
         return false;
 
     this->display_state_ = display;
@@ -246,7 +246,7 @@ bool GreeAC::update_display(DisplayMode display)
 
 bool GreeAC::update_display_unit(DisplayUnit display_unit)
 {
-    if (display_unit >= DisplayUnit::COUNT || this->display_unit_state_ == display_unit)
+    if (display_unit >= DisplayUnit::Count || this->display_unit_state_ == display_unit)
         return false;
 
     this->display_unit_state_ = display_unit;
@@ -268,7 +268,7 @@ bool GreeAC::update_light(bool light)
     bool changed = (this->light_state_ != light);
     this->light_state_ = light;
 
-    if (this->light_select_ != nullptr && this->light_mode_ < LightMode::COUNT)
+    if (this->light_select_ != nullptr && this->light_mode_ < LightMode::Count)
     {
         const auto idx = static_cast<size_t>(this->light_mode_);
         auto active = this->light_select_->active_index();
@@ -381,7 +381,7 @@ bool GreeAC::update_ifeel(bool ifeel)
 
 bool GreeAC::update_quiet(QuietMode quiet)
 {
-    if (quiet >= QuietMode::COUNT || this->quiet_state_ == quiet)
+    if (quiet >= QuietMode::Count || this->quiet_state_ == quiet)
         return false;
 
     this->quiet_state_ = quiet;
@@ -425,7 +425,7 @@ void GreeAC::set_vertical_swing_select(select::Select *vertical_swing_select)
 {
     this->vertical_swing_select_ = vertical_swing_select;
     this->vertical_swing_select_->add_on_state_callback([this](size_t index) {
-        if (index >= static_cast<size_t>(VerticalSwing::COUNT))
+        if (index >= static_cast<size_t>(VerticalSwing::Count))
             return;
         auto swing = static_cast<VerticalSwing>(index);
         if (swing == this->vertical_swing_state_)
@@ -438,7 +438,7 @@ void GreeAC::set_horizontal_swing_select(select::Select *horizontal_swing_select
 {
     this->horizontal_swing_select_ = horizontal_swing_select;
     this->horizontal_swing_select_->add_on_state_callback([this](size_t index) {
-        if (index >= static_cast<size_t>(HorizontalSwing::COUNT))
+        if (index >= static_cast<size_t>(HorizontalSwing::Count))
             return;
         auto swing = static_cast<HorizontalSwing>(index);
         if (swing == this->horizontal_swing_state_)
@@ -451,7 +451,7 @@ void GreeAC::set_display_select(select::Select *display_select)
 {
     this->display_select_ = display_select;
     this->display_select_->add_on_state_callback([this](size_t index) {
-        if (index >= static_cast<size_t>(DisplayMode::COUNT))
+        if (index >= static_cast<size_t>(DisplayMode::Count))
             return;
         auto display = static_cast<DisplayMode>(index);
         if (display == this->display_state_)
@@ -464,7 +464,7 @@ void GreeAC::set_display_unit_select(select::Select *display_unit_select)
 {
     this->display_unit_select_ = display_unit_select;
     this->display_unit_select_->add_on_state_callback([this](size_t index) {
-        if (index >= static_cast<size_t>(DisplayUnit::COUNT))
+        if (index >= static_cast<size_t>(DisplayUnit::Count))
             return;
         auto unit = static_cast<DisplayUnit>(index);
         if (unit == this->display_unit_state_)
@@ -477,7 +477,7 @@ void GreeAC::set_light_select(select::Select *light_select)
 {
     this->light_select_ = light_select;
     this->light_select_->add_on_state_callback([this](size_t index) {
-        if (index >= static_cast<size_t>(LightMode::COUNT))
+        if (index >= static_cast<size_t>(LightMode::Count))
             return;
         auto mode = static_cast<LightMode>(index);
         if (mode == this->light_mode_)
@@ -570,7 +570,7 @@ void GreeAC::set_quiet_select(select::Select *quiet_select)
 {
     this->quiet_select_ = quiet_select;
     this->quiet_select_->add_on_state_callback([this](size_t index) {
-        if (index >= static_cast<size_t>(QuietMode::COUNT))
+        if (index >= static_cast<size_t>(QuietMode::Count))
             return;
         auto quiet = static_cast<QuietMode>(index);
         if (quiet == this->quiet_state_)
